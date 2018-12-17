@@ -87,7 +87,7 @@ void showHelp() {
             "\n"
             "      --version                   get version\n"
             "  -h  --help                      show this message\n"
-            "  Notice: If there are multiple parameters , please include it in quotation marks just like --exec_args \"-l 1\"\n"
+            "Notice: If there are multiple parameters , please include it in quotation marks just like --exec_args \"-l 1\"\n"
     );
 
 }
