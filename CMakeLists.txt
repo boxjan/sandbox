@@ -8,7 +8,7 @@ add_compile_options(-Wall)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-add_executable(sandbox.so src/main.cpp src/child.cpp src/child.h src/watcher.cpp src/watcher.h)
+add_executable(sandbox.so src/main.cpp src/runner.h src/child.h src/watcher.h src/runner.cpp src/child.cpp src/watcher.cpp)
 
 target_link_libraries(sandbox.so seccomp)
 

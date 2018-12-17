@@ -6,5 +6,5 @@
 #include "log.h"
 
 int run(const RuntimeConfig &config, RuntimeResult &result) {
-    log::debug("aaa", "aaa");
+
 }

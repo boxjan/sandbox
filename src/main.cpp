@@ -7,6 +7,8 @@
 #include "argh.h"
 #include "runner.h"
 #include "log.h"
+#include <seccomp.h>
+
 
 const char *version = "0.0.1";
 
@@ -25,10 +27,17 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    if ( arg({"-v", "--verbose"}) || arg[{"-v", "--verbose"}] ) {
+        log::isDebug();
+        return 0;
+    }
+
     if ( arg("--version") || arg["--version"] ) {
         showVersion();
         return 0;
     }
+
+
 
     if ( arg({"-l", "--log_path"}) ) {
         std::string path;
@@ -36,8 +45,10 @@ int main(int argc, char **argv) {
         Log::openFile(path.c_str());
     }
 
-    RuntimeResult result = {0};
-    RuntimeConfig config = {0};
+    RuntimeResult result;
+    RuntimeConfig config;
+
+    run(config, result);
 
     log::debug("aaa");
 
@@ -52,6 +63,7 @@ void showVersion() {
 void showHelp() {
     showVersion();
     fprintf(stderr, "%s",
+            "Options:\n"
             "  -t  --max_cpu_time              set cpu real time limit(s), default  1 s \n"
             "  -s  --max_stack                 set process stack limit(kb), default  32 * 1024 kb \n"
             "  -m  --max_memory                set memory limit(kb), default  128 * 1024 kb \n"
