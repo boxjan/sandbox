@@ -6,7 +6,7 @@
 #define SANDBOX_LOG_H
 
 #include <cstdio>
-#include <stdarg.h>
+#include <cstdarg>
 #include <ctime>
 #include <sys/file.h>
 #include <unistd.h>
@@ -16,10 +16,14 @@ const char LEVEL_STR[][8] = {"DEBUG", "INFO", "WARN", "ERROR"};
 const int one_line_max_size = 10240;
 
 static FILE *log_file = nullptr;
+static bool is_debug = false;
 
 struct Log {
 
     static void openFile(const char *file_path) {
+        if (log_file != nullptr)
+            closeFile();
+
         log_file = fopen(file_path, "a+");
     }
 
@@ -29,6 +33,7 @@ struct Log {
     }
 
     static void debug(const char *format, ...) {
+        if ( is_debug ) return;
         va_list args;
         va_start(args, format);
         writeLog(DEBUG, format, args);
@@ -56,6 +61,10 @@ struct Log {
         va_end(args);
     }
 
+    static void isDebug() {
+        is_debug = true;
+    }
+
 private:
     static void writeLog(const LEVEL level, const char *format, va_list &args) {
         // format time
@@ -74,7 +83,7 @@ private:
 
 
         // file
-        if (log_file == nullptr || log_file == NULL) {
+        if (log_file == nullptr) {
             fprintf(stderr, "%s", log_str);
             return;
         }
