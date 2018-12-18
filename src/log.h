@@ -13,6 +13,7 @@
 
 enum LEVEL {DEBUG, INFO, WARN, ERROR};
 const char LEVEL_STR[][8] = {"DEBUG", "INFO", "WARN", "ERROR"};
+
 const int one_line_max_size = 10240;
 
 static FILE *log_file = nullptr;

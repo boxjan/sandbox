@@ -4,6 +4,7 @@
 
 #ifndef SANDBOX_RUNNER_H
 #define SANDBOX_RUNNER_H
+
 #include <string>
 using std::string;
 
@@ -12,11 +13,10 @@ struct RuntimeConfig {
     int max_stack;
     int max_memory;
     int max_output_size;
-    int max_process_number;
     int max_open_file_number;
 
     string exec_path;
-    string env;
+    string exec_env;
     string exec_args;
 
     string input_path;
@@ -24,14 +24,21 @@ struct RuntimeConfig {
     string error_path;
 
     string log_path;
+    string scmp_name;
 
     int uid;
     int gid;
-} ;
-
-enum CHILD_EXIT_REASON {
-
 };
+
+enum RUN_EXIT_CODE {
+    NOT_RUNNING_BY_ROOT,
+    CHILD_FAIL,
+};
+
+const char RUN_EXIT_REASON[][32] = {
+        "NOT RUNNING BY ROOT",
+        "CHILE PROCESS FAIL",
+};     //12345678123456781234567812345678
 
 enum RESULT {
     SUCCESS_EXIT,
@@ -61,19 +68,12 @@ struct RuntimeResult {
         exit_code = 0;
         signal = 0;
         result = SUCCESS_EXIT;
-
     };
 };
 
-struct runtime {
-    FILE *in;
-    int in_fd;
-    FILE *out;
-    int out_fd;
-    FILE *err;
-    int err_fd;
-};
-
-
 int run(const RuntimeConfig &config, RuntimeResult &result);
+
+#define RUN_EXIT(code) log::error("procecc exit because %s", RUN_EXIT_REASON[code]);
+
+
 #endif //SANDBOX_RUNNER_H
