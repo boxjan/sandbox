@@ -23,10 +23,6 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
 
     if (pid == 0) {
         child(config);
-    } else {
-        if () {
-
-        }
     }
 
 

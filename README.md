@@ -8,7 +8,7 @@
 此项目使用 Cmake 进行 Makefile 的环境配置, 通过 ``` cmake . ``` 构建 makefile 后, 再通过 ``` make``` 进行编译.
 
 ## 项目测试
-项目中 test/bad_code 文件夹下包含沙箱测试的部分样例, 参考于 [Judger QingdaoU](https://github.com/QingdaoU/Judger/), 通过 ``` make test ``` 进行测试
+项目中 test/bad_code 文件夹下包含沙箱测试的部分样例, 参考于 [QingdaoU Judger](https://github.com/QingdaoU/Judger/), 通过 ``` make test ``` 进行测试
 
 ## 第三方库
-- [argh](https://github.com/adishavit/argh.git) 用于处理输入参数
+- [getopt](https://github.com/r-lyeh-archived/getopt.git) 用于处理输入参数

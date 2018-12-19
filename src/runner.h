@@ -73,7 +73,7 @@ struct RuntimeResult {
 
 int run(const RuntimeConfig &config, RuntimeResult &result);
 
-#define RUN_EXIT(code) log::error("procecc exit because %s", RUN_EXIT_REASON[code]);
+#define RUN_EXIT(code) log::error("procecc exit because %s", RUN_EXIT_REASON[code]); exit(0);
 
 
 #endif //SANDBOX_RUNNER_H

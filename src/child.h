@@ -21,6 +21,7 @@ enum CHILD_EXIT_CODE {
     MOUNT_ERROR_FILE_FAIL,
     SET_UID_FAIL,
     SET_GID_FAIL,
+    GET_EXEC_PATH_ERROR,
 };
 
 const char CHILD_EXIT_REASON[][32] = {
@@ -36,7 +37,8 @@ const char CHILD_EXIT_REASON[][32] = {
         "OPEN ERROR FILE FAIL",
         "MOUNT ERROR FILE FAIL",
         "SETTING USER ID FAIL",
-        "SETTING GROUP ID FAIL"
+        "SETTING GROUP ID FAIL",
+        "GET EXEC PATH ERROR",
 };     //12345678123456781234567812345678
 
 void child(const RuntimeConfig &);

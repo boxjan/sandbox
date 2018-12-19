@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-#include "argh.h"
+#include "cmdline.h"
 #include "runner.h"
 #include "log.h"
 #include <seccomp.h>
@@ -16,112 +16,78 @@ void showVersion();
 
 void showHelp();
 
+
 int main(int argc, char **argv) {
     using std::cout;
-    argh::parser arg;
 
-    arg.parse(argc, argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+    cmdline::parser arg;
+    arg.add<int>("max_cpu_time", 't', "set cpu time limit in micro seconds(ms)", false, -1);
+    arg.add<int>("max_stack", 's', "set process stack limit(kb)", false, -1);
+    arg.add<int>("max_memory", 'm', "set memory limit(kb)", false, -1);
+    arg.add<int>("max_output_size", 'q', "set output limit(byte)", false, -1);
+    arg.add<int>("max_open_file_number", 'f', "set program open file number limit", false, -1);
 
-    if ( arg({"-h", "--help"}) || arg[{"-h", "--help"}] ) {
-        showHelp();
-        return 0;
-    }
+    arg.add<string>("exec_path", 'c', "set executable file path", true);
+    arg.add<string>("exec_args", 'a', "set exec arg, if have more than one args, use quotes", false);
+    arg.add<string>("exec_env", 'n', "set exec environment, if have more than one args ,use quotes", false);
 
-    if ( arg("--version") || arg["--version"] ) {
-        showVersion();
-        return 0;
-    }
+    arg.add<string>("input_path", 'i', "set input redirect", false, "/dev/stdin");
+    arg.add<string>("output_path", 'o', "set output redirect", false, "/dev/stdin");
+    arg.add<string>("error_path", 'e', "set error output redirect", false, "/dev/stdout");
+
+    arg.add<int>("uid", 'u', "set running user id", false, -1);
+    arg.add<int>("gid", 'g', "set running group id", false, -1);
+    arg.add<string>("scmp_name", 'p', "set running seccomp rule name", false, "", cmdline::oneof<string>("", "compile", "low", "high"));
+
+    arg.add<string>("log_path", 'l', "set runtime log path", false, "/dev/stderr");
+    arg.add("verbose", 'v', "record log in verbose");
+
+    arg.footer("\nSandbox design for OnlineJudge \nNotice: If there are multiple parameters , please include it in quotation marks just like --exec_args \"-l 1\"\n");
+
+    arg.parse_check(argc, argv);
 
     RuntimeResult result;
     RuntimeConfig config;
 
-    if ( arg({"-l", "--log_path"}) ) {
+    if ( arg.exist("log_path") ) {
         std::string path;
-        arg("-l") >> path;
-        config.log_path = path;
+        config.log_path = arg.get<string>("log_path");
         Log::openFile(path.c_str());
     }
 
-    if ( arg({"-v", "--verbose"}) || arg[{"-v", "--verbose"}] ) {
+    if ( arg.exist("verbose") ) {
         log::isDebug();
     }
 
     // set config
-    arg({"-t", "--max_cpu_time"}, 1) >> config.max_cpu_time;
-    config.max_cpu_time = config.max_cpu_time * 1000;
+    config.max_cpu_time = arg.get<int>("max_cpu_time");
 
-    arg({"-s", "--max_stack"}, 16 * 1024) >> config.max_stack;
-    config.max_stack = config.max_stack * 1024;
+    config.max_stack = arg.get<int>("max_stack");
 
-    arg({"-m", "--max_memory"}, 64 * 1024) >> config.max_memory;
-    config.max_memory = config.max_memory * 1024;
+    config.max_memory = arg.get<int>("max_memory");
 
-    arg({"-q", "--max_output_size"}, 1024) >> config.max_output_size;
+    config.max_output_size = arg.get<int>("max_output_size");
 
-    arg({"-f", "--max_open_file_number"}, 6)  >> config.max_open_file_number;
+    config.max_open_file_number = arg.get<int>("max_open_file_number");
 
-    if (arg({"-c", "--exec_path"})) {
-        arg({"-c", "--exec_path"}) >> config.exec_path;
-    } else {
-        fprintf(stderr, "not exec path");
-        return 0;
-    }
+    config.exec_path = arg.get<string>("exec_path");
 
-    arg({"-c", "--exec_env"}, "") >> config.exec_env;
+    config.exec_args = arg.get<string>("exec_args");
 
-    arg({"-c", "--exec_args"}, "") >> config.exec_args;
+    config.exec_env = arg.get<string>("exec_env");
 
-    arg({"-i", "--input_path"}, "/dev/stdin") >> config.input_path;
+    config.input_path = arg.get<string>("input_path");
 
-    arg({"-o", "--output_path"}, "/dev/stdout") >> config.output_path;
+    config.output_path = arg.get<string>("output_path");
 
-    arg({"-e", "--error_path"}, "/dev/stderr") >> config.error_path;
+    config.error_path = arg.get<string>("error_path");
 
-    arg({"-p", "--scmp_rule"}, "high") >> config.error_path;
+    config.uid = arg.get<int>("uid");
 
-    arg({"-u", "--uid"}, 65534) >> config.uid;
+    config.gid = arg.get<int>("gid");
 
-    arg({"-g", "--gid"}, 65534) >> config.gid;
+    config.scmp_name = arg.get<string>("scmp_name");
 
     run(config, result);
-
-
-}
-
-void showVersion() {
-    fprintf(stderr, "%s%s%s",
-            "SandBox Design for OnlineJudge\n"
-            "  Version is ", version, "\n\n");
-}
-
-void showHelp() {
-    showVersion();
-    fprintf(stderr, "%s",
-            "Options:\n"
-            "  -t  --max_cpu_time              set cpu real time limit(s), default  1 s \n"
-            "  -s  --max_stack                 set process stack limit(kb), default  16 * 1024 kb \n"
-            "  -m  --max_memory                set memory limit(kb), default  64 * 1024 kb \n"
-            "  -q  --max_output_size           set output limit(byte), default  1024 byte \n"
-            "  -f  --max_open_file_number      set program open file number limit, default  6 \n"
-            "\n"
-            "  -c  --exec_path                 set executable file path \n"
-            "  -n  --exec_env                  set exec environment, if have more than one args ,use quotes \n"
-            "  -a  --exec_args                 set exec arg, if have more than one args, use quotes"
-            "\n"
-            "  -i  --input_path                set stdin redirect, default /dev/stdin \n"
-            "  -o  --output_path               set stdout redirect, default /dev/stdout \n"
-            "  -e  --error_path                set stderr redirect, default /dev/stderr \n"
-            "\n"
-            "  -u  --uid                       set running user id, default 65534\n"
-            "  -g  --gid                       set running group id, default 65534\n"
-            "  -p  --scmp_rule                 set running seccomp rule name (compile, low, high), default high\n"
-            "\n"
-            "  -l  --log_path                  set runtime log path, default /dev/stderr \n"
-            "  -v  --verbose                   record log in verbose\n"
-            "\n"
-            "      --version                   get version\n"
-            "  -h  --help                      show this message\n"
-            "Notice: If there are multiple parameters , please include it in quotation marks just like --exec_args \"-l 1\"\n"
-    );
 
 }
