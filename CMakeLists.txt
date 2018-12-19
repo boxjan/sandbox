@@ -4,7 +4,7 @@ project(sandbox)
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
 add_compile_options(-pie)
-add_compile_options(-O4)
+#add_compile_options(-O2)
 add_compile_options(-Wall)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
