@@ -9,13 +9,7 @@
 #include "log.h"
 #include <seccomp.h>
 
-
 const char *version = "0.0.1";
-
-void showVersion();
-
-void showHelp();
-
 
 int main(int argc, char **argv) {
     using std::cout;
@@ -27,13 +21,13 @@ int main(int argc, char **argv) {
     arg.add<int>("max_output_size", 'q', "set output limit(byte)", false, -1);
     arg.add<int>("max_open_file_number", 'f', "set program open file number limit", false, -1);
 
-    arg.add<string>("exec_path", 'c', "set executable file path", true);
+    arg.add<string>("exec_path", 'c', "set executable file path", false);
     arg.add<string>("exec_args", 'a', "set exec arg, if have more than one args, use quotes", false);
     arg.add<string>("exec_env", 'n', "set exec environment, if have more than one args ,use quotes", false);
 
     arg.add<string>("input_path", 'i', "set input redirect", false, "/dev/stdin");
-    arg.add<string>("output_path", 'o', "set output redirect", false, "/dev/stdin");
-    arg.add<string>("error_path", 'e', "set error output redirect", false, "/dev/stdout");
+    arg.add<string>("output_path", 'o', "set output redirect", false, "/dev/stdout");
+    arg.add<string>("error_path", 'e', "set error output redirect", false, "/dev/stderr");
 
     arg.add<int>("uid", 'u', "set running user id", false, -1);
     arg.add<int>("gid", 'g', "set running group id", false, -1);
@@ -90,4 +84,15 @@ int main(int argc, char **argv) {
 
     run(config, result);
 
+    printf("{\n"
+           "  \"CPU_TIME\": %d\n"
+           "  \"CLOCK_TIME\": %d\n"
+           "  \"MEMORY\": %d\n"
+           "  \"EXIT_CODE:\": %d\n"
+           "  \"RESULT_CODE\": %d\n"
+           "  \"RESULT\": %s\n"
+           "}\n" ,
+           result.cpu_time, result.clock_time,
+           result.memory_use, result.exit_code,
+           result.result, RESULT_STRING[result.result]);
 }

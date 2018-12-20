@@ -5,11 +5,13 @@
 #include <unistd.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <signal.h>
 #include <cstring>
 #include <vector>
 #include <iostream>
 
 #include "child.h"
+#include "runner.h"
 #include "log.h"
 
 const int MAX_ARGS = 128;
@@ -20,8 +22,11 @@ const int stdout_fd = fileno(stdout);
 const int stderr_fd = fileno(stderr);
 
 void close_file(FILE *fp) {
+    if (fp == nullptr)
+        return;
+
     int fd = fileno(fp);
-    if (fp != nullptr || fd != stdin_fd || fd != stdout_fd || fd != stderr_fd)
+    if (fd == stdin_fd || fd == stdout_fd || fd == stderr_fd)
         return;
 
     fclose(fp);
@@ -36,7 +41,7 @@ void child(const RuntimeConfig &config) {
     if (config.max_cpu_time != -1) {
         rlimit limit;
         log::debug("cpu time limit: %d ms", config.max_cpu_time);
-        limit.rlim_max = limit.rlim_cur = (rlim_t) (config.max_cpu_time + 500) / 1000;
+        limit.rlim_max = limit.rlim_cur = (rlim_t) (config.max_cpu_time + 1000) / 1000;
         if ( setrlimit(RLIMIT_CPU, &limit) != 0 ) {
             CHILD_EXIT(CPU_LIMIT_FAIL);
         }
@@ -45,7 +50,7 @@ void child(const RuntimeConfig &config) {
     // set memory limit
     if (config.max_memory != -1){
         rlimit limit;
-        log::debug("memory limit: %d bytes", config.max_memory);
+        log::debug("memory limit: %d bytes %d kb", config.max_memory * 1024, config.max_memory);
         limit.rlim_max = limit.rlim_cur = (rlim_t) config.max_memory * 1024;
         if ( setrlimit(RLIMIT_AS, &limit) != 0 ) {
             CHILD_EXIT(MEMORY_LIMIT_FAIL);
@@ -55,7 +60,7 @@ void child(const RuntimeConfig &config) {
     // set stack limit
     if (config.max_stack != -1){
         rlimit limit;
-        log::debug("stack limit: %d bytes", config.max_stack);
+        log::debug("stack limit: %d bytes %d kb", config.max_stack * 1024, config.max_stack);
         limit.rlim_max = limit.rlim_cur = (rlim_t) config.max_stack * 1024;
         if (setrlimit(RLIMIT_STACK, &limit) != 0) {
             CHILD_EXIT(STACK_LIMIT_FAIL);
@@ -121,8 +126,6 @@ void child(const RuntimeConfig &config) {
         }
     }
 
-
-
     // set user id
     if (config.uid != -1){
         log::debug("set uid as: %d", config.uid);
@@ -131,6 +134,7 @@ void child(const RuntimeConfig &config) {
         }
     }
 
+    // set group id
     if (config.gid != -1)
     {
         log::debug("set gid as: %d", config.gid);
@@ -165,8 +169,8 @@ void child(const RuntimeConfig &config) {
         memset((char*)env, 0, sizeof(env));
         int i = 0;
 
-        char *str = new char[config.exec_args.length() + 1];
-        strcpy(str, config.exec_args.c_str());
+        char *str = new char[config.exec_env.length() + 1];
+        strcpy(str, config.exec_env.c_str());
 
         env[i] = strtok(str, " ");
         while (env[i++]) {

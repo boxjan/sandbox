@@ -22,6 +22,8 @@ enum CHILD_EXIT_CODE {
     SET_UID_FAIL,
     SET_GID_FAIL,
     GET_EXEC_PATH_ERROR,
+    GET_EXEC_ARGS_ERROR,
+    GET_EXEC_ENV_ERROR,
 };
 
 const char CHILD_EXIT_REASON[][32] = {
@@ -39,6 +41,8 @@ const char CHILD_EXIT_REASON[][32] = {
         "SETTING USER ID FAIL",
         "SETTING GROUP ID FAIL",
         "GET EXEC PATH ERROR",
+        "GET EXEC ARGS ERROR",
+        "GET EXEC ENV ERROR",
 };     //12345678123456781234567812345678
 
 void child(const RuntimeConfig &);
@@ -48,7 +52,7 @@ void child(const RuntimeConfig &);
     close_file(IN_FILE); \
     close_file(OUT_FILE); \
     close_file(ERR_FILE); \
-    exit(CHILD_FAIL); \
+    raise(SIGUSR2); \
 }
 
 
