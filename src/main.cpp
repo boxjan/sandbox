@@ -7,9 +7,6 @@
 #include "cmdline.h"
 #include "runner.h"
 #include "log.h"
-#include <seccomp.h>
-
-const char *version = "0.0.1";
 
 int main(int argc, char **argv) {
     using std::cout;
@@ -21,7 +18,7 @@ int main(int argc, char **argv) {
     arg.add<int>("max_output_size", 'q', "set output limit(byte)", false, -1);
     arg.add<int>("max_open_file_number", 'f', "set program open file number limit", false, -1);
 
-    arg.add<string>("exec_path", 'c', "set executable file path", false);
+    arg.add<string>("exec_path", 'c', "set executable file path", true);
     arg.add<string>("exec_args", 'a', "set exec arg, if have more than one args, use quotes", false);
     arg.add<string>("exec_env", 'n', "set exec environment, if have more than one args ,use quotes", false);
 
@@ -31,7 +28,7 @@ int main(int argc, char **argv) {
 
     arg.add<int>("uid", 'u', "set running user id", false, -1);
     arg.add<int>("gid", 'g', "set running group id", false, -1);
-    arg.add<string>("scmp_name", 'p', "set running seccomp rule name", false, "", cmdline::oneof<string>("", "compile", "low", "high"));
+    arg.add<string>("scmp_name", 'p', "set running seccomp rule name", false, "", cmdline::oneof<string>("", "low", "mid", "high"));
 
     arg.add<string>("log_path", 'l', "set runtime log path", false, "/dev/stderr");
     arg.add("verbose", 'v', "record log in verbose");
@@ -85,14 +82,17 @@ int main(int argc, char **argv) {
     run(config, result);
 
     printf("{\n"
-           "  \"CPU_TIME\": %d\n"
-           "  \"CLOCK_TIME\": %d\n"
-           "  \"MEMORY\": %d\n"
-           "  \"EXIT_CODE:\": %d\n"
-           "  \"RESULT_CODE\": %d\n"
-           "  \"RESULT\": %s\n"
+           "  \"CPU_TIME\": %d,\n"
+           "  \"CLOCK_TIME\": %d,\n"
+           "  \"MEMORY\": %d,\n"
+           "  \"STATUS\": %d,\n"
+           "  \"SIGNAL:\" %d,\n"
+           "  \"EXIT_CODE:\": %d,\n"
+           "  \"RESULT_CODE\": %d,\n"
+           "  \"RESULT\": \"%s\"\n"
            "}\n" ,
            result.cpu_time, result.clock_time,
-           result.memory_use, result.exit_code,
+           result.memory_use, result.status,
+           result.signal, result.exit_code,
            result.result, RESULT_STRING[result.result]);
 }
