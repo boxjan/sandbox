@@ -39,9 +39,8 @@ void child(const RuntimeConfig &config) {
 
     // set CPU time limit
     if (config.max_cpu_time != -1) {
-        rlimit limit;
+        rlimit limit = {(rlim_t) (config.max_cpu_time + 1000) / 1000, (rlim_t) (config.max_cpu_time + 1000) / 1000};
         log::debug("cpu time limit: %d ms", config.max_cpu_time);
-        limit.rlim_max = limit.rlim_cur = (rlim_t) (config.max_cpu_time + 1000) / 1000;
         if ( setrlimit(RLIMIT_CPU, &limit) != 0 ) {
             CHILD_EXIT(CPU_LIMIT_FAIL);
         }
@@ -49,9 +48,8 @@ void child(const RuntimeConfig &config) {
 
     // set memory limit
     if (config.max_memory != -1){
-        rlimit limit;
+        rlimit limit = {(rlim_t) config.max_memory * 1024, (rlim_t) config.max_memory * 1024};
         log::debug("memory limit: %d bytes %d kb", config.max_memory * 1024, config.max_memory);
-        limit.rlim_max = limit.rlim_cur = (rlim_t) config.max_memory * 1024;
         if ( setrlimit(RLIMIT_AS, &limit) != 0 ) {
             CHILD_EXIT(MEMORY_LIMIT_FAIL);
         }
@@ -59,9 +57,8 @@ void child(const RuntimeConfig &config) {
 
     // set stack limit
     if (config.max_stack != -1){
-        rlimit limit;
+        rlimit limit = {(rlim_t) config.max_stack * 1024, (rlim_t) config.max_stack * 1024};
         log::debug("stack limit: %d bytes %d kb", config.max_stack * 1024, config.max_stack);
-        limit.rlim_max = limit.rlim_cur = (rlim_t) config.max_stack * 1024;
         if (setrlimit(RLIMIT_STACK, &limit) != 0) {
             CHILD_EXIT(STACK_LIMIT_FAIL);
         }
@@ -69,9 +66,8 @@ void child(const RuntimeConfig &config) {
 
     // set output limit
     if (config.max_output_size != -1) {
-        rlimit limit;
+        rlimit limit = {(rlim_t) config.max_output_size, (rlim_t) config.max_output_size};
         log::debug("output limit: %d bytes", config.max_output_size);
-        limit.rlim_max = limit.rlim_cur = (rlim_t) config.max_output_size;
         if (setrlimit(RLIMIT_FSIZE, &limit) != 0) {
             CHILD_EXIT(OUTPUT_LIMIT_FAIL);
         }
@@ -79,9 +75,8 @@ void child(const RuntimeConfig &config) {
 
     // set open file number limit
     if (config.max_open_file_number != -1){
-        rlimit limit;
+        rlimit limit = {(rlim_t) config.max_open_file_number, (rlim_t) config.max_open_file_number};
         log::debug("open file limit: %d", config.max_open_file_number);
-        limit.rlim_max = limit.rlim_cur = (rlim_t) config.max_open_file_number;
         if (setrlimit(RLIMIT_NOFILE, &limit) != 0) {
             CHILD_EXIT(OPEN_FILE_COUNT_LIMIT_FAIL);
         }
@@ -103,12 +98,12 @@ void child(const RuntimeConfig &config) {
     // open output file and mount to stdout
     if (config.output_path != "/dev/stdout") {
         log::debug("try to open output file: %s", config.output_path.c_str());
-        IN_FILE = fopen(config.output_path.c_str(), "w");
-        if (IN_FILE == nullptr) {
+        OUT_FILE = fopen(config.output_path.c_str(), "w");
+        if (OUT_FILE == nullptr) {
             CHILD_EXIT(OPEN_OUTPUT_FILE_FAIL);
         }
 
-        if (dup2(fileno(IN_FILE), stdout_fd) == -1) {
+        if (dup2(fileno(OUT_FILE), stdout_fd) == -1) {
             CHILD_EXIT(MOUNT_OUTPUT_FILE_FAIL);
         }
     }
@@ -116,12 +111,12 @@ void child(const RuntimeConfig &config) {
     // open error file and mount to stderr
     if (config.error_path != "/dev/stderr") {
         log::debug("try to open error file: %s", config.error_path.c_str());
-        IN_FILE = fopen(config.output_path.c_str(), "w");
-        if (IN_FILE == nullptr) {
+        ERR_FILE = fopen(config.error_path.c_str(), "w");
+        if (ERR_FILE == nullptr) {
             CHILD_EXIT(OPEN_ERROR_FILE_FAIL);
         }
 
-        if (dup2(fileno(IN_FILE), stderr_fd) == -1) {
+        if (dup2(fileno(ERR_FILE), stderr_fd) == -1) {
             CHILD_EXIT(MOUNT_ERROR_FILE_FAIL);
         }
     }
@@ -144,7 +139,7 @@ void child(const RuntimeConfig &config) {
     }
 
     // cut args
-    char **args = (char **)0;
+    char **args;
     {
         args = (char **)malloc(MAX_ARGS * sizeof(char *));
         memset((char*)args, 0, sizeof(args));
@@ -164,7 +159,7 @@ void child(const RuntimeConfig &config) {
 
     // cut env
     char **env = (char **)0;
-    if (config.exec_env != ""){
+    if (! config.exec_env.empty()) {
         env = (char **)malloc(MAX_ARGS * sizeof(char *));
         memset((char*)env, 0, sizeof(env));
         int i = 0;
@@ -179,9 +174,16 @@ void child(const RuntimeConfig &config) {
     }
 
     // load seccomp
-    if (config.scmp_name != "") {
+    if (! config.scmp_name.empty()) {
 
     }
 
-    execve(config.exec_path.c_str(), args, env);
+    if (! config.exec_env.empty()) {
+        execve(config.exec_path.c_str(), args, env);
+    } else {
+        execv(config.exec_path.c_str(), args);
+    }
+
+    CHILD_EXIT(EXEC_ERROR);
+
 }
