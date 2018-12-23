@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <pthread.h>
 #include <sched.h>
@@ -38,21 +39,37 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
 
     if (pid == 0) {
         child(config);
-        return 0;
+        RUN_EXIT(CHILD_FAIL);
     } else if (pid < 0) {
         RUN_EXIT(FORK_FAIL);
     }
 
     // new thread to kill child if it spend to much time
-    pthread_t tid = 0;
+    pthread_t timeout_tid = 0, memory_tid = 0;
     if (config.max_cpu_time != -1) {
+        log::debug("timeout killer up");
         timeoutKillerStruct killerStruct(pid, config.max_cpu_time);
-        if (pthread_create(&tid, nullptr, timeout_killer, (void *) (&killerStruct)) != 0) {
+        if (pthread_create(&timeout_tid, nullptr, timeout_killer, (void *) (&killerStruct)) != 0) {
             kill(pid, SIGKILL);
             RUN_EXIT(KILLER_THREAD_UP_FAIL);
         }
 
-        if (pthread_detach(tid) != 0) {
+        if (pthread_detach(timeout_tid) != 0) {
+            kill(pid, SIGKILL);
+            RUN_EXIT(THREAD_DETACH_FAIL);
+        }
+    }
+
+    if (config.max_memory != -1 && ! config.use_rlimit_to_limit_memory) {
+        log::debug("use killer to limit memory");
+        log::debug("memory limit: %d bytes %d kb", config.max_memory * 1024, config.max_memory);
+        memoryKillerStruct killerStruct(pid, config.max_memory);
+        if (pthread_create(&memory_tid, nullptr, memory_killer, (void *) (&killerStruct)) != 0) {
+            kill(pid, SIGKILL);
+            RUN_EXIT(KILLER_THREAD_UP_FAIL);
+        }
+
+        if (pthread_detach(memory_tid) != 0) {
             kill(pid, SIGKILL);
             RUN_EXIT(THREAD_DETACH_FAIL);
         }
@@ -66,39 +83,49 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
     }
     gettimeofday(&end_at, nullptr);
 
-    if (tid != 0 && pthread_kill(tid, 0) == ESRCH ) {
-        result.result = TIME_LIMIT_EXCEEDED;
-    } else {
-        pthread_cancel(tid);
+    if (! (timeout_tid != 0 && pthread_kill(timeout_tid, 0) == ESRCH )) {
+        pthread_cancel(timeout_tid);
     }
 
+    result.status = status;
     result.cpu_time =
             (int) usage.ru_stime.tv_sec * 1000 + (int) usage.ru_stime.tv_usec / 1000 +
             (int) usage.ru_utime.tv_sec * 1000 + (int) usage.ru_utime.tv_usec / 1000;
     result.clock_time = (int) (end_at.tv_sec - start_at.tv_sec) * 1000 + (int) (end_at.tv_usec - start_at.tv_usec) / 1000;
-
     result.memory_use = (int) usage.ru_maxrss;
+
+    getrusage(RUSAGE_CHILDREN, &usage);
 
     if (WIFSIGNALED(status)) {
         result.signal = WTERMSIG(status);
     }
 
-    if (result.signal == SIGUSR2) {
-        result.result = SYSTEM_ERROR;
-        return 0;
+    if (WIFEXITED(status)) {
+        result.exit_code = WEXITSTATUS(status);
     }
 
-    if (result.signal == SIGSEGV ) {
-        if (config.max_memory != -1 && result.memory_use > config.max_memory) {
-            result.result = MEMORY_LIMIT_EXCEEDED;
-        } else {
+    if (result.signal == SIGUSR2) {
+
+        result.result = SYSTEM_ERROR;
+
+    } else {
+
+        if (result.exit_code != 0 || result.signal != 0) {
             result.result = RUNTIME_ERROR;
         }
 
-    }
+        if (config.max_cpu_time != -1 && ( result.signal == SIGUSR1 || result.clock_time > config.max_cpu_time || result.cpu_time > config.max_cpu_time)) {
+            result.result = TIME_LIMIT_EXCEEDED;
+        }
 
-    if (config.max_cpu_time != -1 && result.cpu_time > config.max_cpu_time) {
-        result.result = TIME_LIMIT_EXCEEDED;
+        if (result.signal == SIGXFSZ) {
+            result.result = OUTPUT_LIMIT_EXCEEDED;
+        }
+
+        if (result.signal == SIGSEGV && -1 != config.max_memory && result.memory_use > config.max_memory) {
+            result.result = MEMORY_LIMIT_EXCEEDED;
+        }
+
     }
 
     return 0;
@@ -106,17 +133,59 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
 }
 
 void *timeout_killer(void *args) {
-    timeoutKillerStruct *killer = (timeoutKillerStruct *)args;
+    auto *killer = (timeoutKillerStruct *)args;
 
-    struct timespec delay = {killer->time / 1000, (killer->time % 1000 + 300) * 1000}, remainder;
+    timespec delay = {killer->time / 1000, (killer->time % 1000 + 300) * 1000}, remainder;
 
     if (nanosleep(&delay, &remainder) != 0) {
         kill(killer->pid, SIGKILL);
-//        RUN_EXIT(KILLER_WAKEUP);
+    }
+
+    if (remainder.tv_sec || remainder.tv_nsec) {
+        log::warn("Why the time out killer wake up?");
     }
 
     kill(killer->pid, SIGUSR1);
 
     return nullptr;
 
+}
+
+void *memory_killer(void *args) {
+    auto *killer = (memoryKillerStruct *) args;
+    int pagesize = getpagesize() / 1024;
+
+    FILE *proc;
+    char proc_file_path[1024];
+    snprintf(proc_file_path, 1023, "/proc/%d/statm", killer->pid);
+
+    char statm[512], *p;
+    long mem[8];
+
+    while (true) {
+        if (kill(killer->pid, 0) == ESRCH) {
+            break;
+        }
+
+        timespec delay = {0, 25};
+        nanosleep(&delay, nullptr);
+
+        if (nullptr == (proc = fopen(proc_file_path, "r"))) {
+            break;
+        }
+        fgets(statm, 511, proc);
+        fclose(proc);
+
+        p = statm;
+        for (int i = 0; i < 7; i++) {
+            mem[i] = strtol(p, &p, 10);
+        }
+
+        if (mem[1] * pagesize > killer->limit) {
+            kill(killer->pid, SIGSEGV);
+            break;
+        }
+    }
+
+    return nullptr;
 }

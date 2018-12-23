@@ -47,8 +47,9 @@ void child(const RuntimeConfig &config) {
     }
 
     // set memory limit
-    if (config.max_memory != -1){
+    if (config.use_rlimit_to_limit_memory  && config.max_memory != -1){
         rlimit limit = {(rlim_t) config.max_memory * 1024, (rlim_t) config.max_memory * 1024};
+        log::debug("use setrlimit to limit memory");
         log::debug("memory limit: %d bytes %d kb", config.max_memory * 1024, config.max_memory);
         if ( setrlimit(RLIMIT_AS, &limit) != 0 ) {
             CHILD_EXIT(MEMORY_LIMIT_FAIL);

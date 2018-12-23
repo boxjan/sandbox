@@ -22,6 +22,7 @@ struct RuntimeConfig {
     string input_path;
     string output_path;
     string error_path;
+    bool use_rlimit_to_limit_memory;
 
     string log_path;
     string scmp_name;
@@ -37,7 +38,6 @@ enum RUN_EXIT_CODE {
     KILLER_THREAD_UP_FAIL,
     THREAD_DETACH_FAIL,
     CHILD_FAIL,
-    KILLER_WAKEUP,
 };
 
 const char RUN_EXIT_REASON[][32] = {
@@ -47,7 +47,6 @@ const char RUN_EXIT_REASON[][32] = {
         "KILLER THREAD UP FAIL",
         "THREAD DETACH FAIL",
         "CHILE PROCESS FAIL",
-        "KILLER WAKE UP",
 };     //12345678123456781234567812345678
 
 enum RESULT {
@@ -75,6 +74,7 @@ struct RuntimeResult {
     int exit_code;
     int signal;
     int result;
+    int status;
 
     RuntimeResult() {
         cpu_time = 0;
@@ -83,6 +83,7 @@ struct RuntimeResult {
         exit_code = 0;
         signal = 0;
         result = SUCCESS_EXIT;
+        status = 0;
     };
 };
 
@@ -95,9 +96,20 @@ struct timeoutKillerStruct {
     }
 };
 
+struct memoryKillerStruct {
+    pid_t pid;
+    int limit;
+    memoryKillerStruct(pid_t pid, int limit) {
+        this->pid = pid;
+        this->limit = limit;
+    }
+};
+
 int run(const RuntimeConfig &config, RuntimeResult &result);
 
 void *timeout_killer(void*);
+
+void *memory_killer(void*);
 
 #define RUN_EXIT(code) log::error("procecc exit because %s", RUN_EXIT_REASON[code]); exit(0);
 

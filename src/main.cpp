@@ -29,6 +29,7 @@ int main(int argc, char **argv) {
     arg.add<int>("uid", 'u', "set running user id", false, -1);
     arg.add<int>("gid", 'g', "set running group id", false, -1);
     arg.add<string>("scmp_name", 'p', "set running seccomp rule name", false, "", cmdline::oneof<string>("", "low", "mid", "high"));
+    arg.add("use_rlimit_to_limit_memory", 0, "use rlimit to limit memory");
 
     arg.add<string>("log_path", 'l', "set runtime log path", false, "/dev/stderr");
     arg.add("verbose", 'v', "record log in verbose");
@@ -78,6 +79,8 @@ int main(int argc, char **argv) {
     config.gid = arg.get<int>("gid");
 
     config.scmp_name = arg.get<string>("scmp_name");
+
+    config.use_rlimit_to_limit_memory =  arg.exist("use_rlimit_to_limit_memory");
 
     run(config, result);
 
