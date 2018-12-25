@@ -60,7 +60,8 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
         }
     }
 
-    if (config.max_memory != -1 && ! config.use_rlimit_to_limit_memory) {
+    // new thread to kill child if it use to much memory
+    if (config.max_memory != -1 && !config.use_rlimit_to_limit_memory) {
         log::debug("use killer to limit memory");
         log::debug("memory limit: %d bytes %d kb", config.max_memory * 1024, config.max_memory);
         memoryKillerStruct killerStruct(pid, config.max_memory);
@@ -110,11 +111,15 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
 
     } else {
 
-        if (result.exit_code != 0 || result.signal != 0) {
+        if (result.exit_code != 0 || result.signal != 0 || result.status != 0) {
             result.result = RUNTIME_ERROR;
         }
 
-        if (config.max_cpu_time != -1 && ( result.signal == SIGUSR1 || result.clock_time > config.max_cpu_time || result.cpu_time > config.max_cpu_time)) {
+        if (result.signal == SIGSYS) {
+            result.result = RUNTIME_ERROR_BAD_SYSCALL;
+        }
+
+        if (config.max_cpu_time != -1 && ( result.status == 4991 || result.clock_time > config.max_cpu_time || result.cpu_time > config.max_cpu_time)) {
             result.result = TIME_LIMIT_EXCEEDED;
         }
 
@@ -135,17 +140,14 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
 void *timeout_killer(void *args) {
     auto *killer = (timeoutKillerStruct *)args;
 
-    timespec delay = {killer->time / 1000, (killer->time % 1000 + 300) * 1000}, remainder;
+    timespec delay = {killer->time / 1000, (killer->time % 1000 + 100) * 1000000};
 
-    if (nanosleep(&delay, &remainder) != 0) {
+    if (nanosleep(&delay, nullptr) != 0) {
+        log::warn("It still have time, why the time out killer wake up?");
         kill(killer->pid, SIGKILL);
     }
 
-    if (remainder.tv_sec || remainder.tv_nsec) {
-        log::warn("Why the time out killer wake up?");
-    }
-
-    kill(killer->pid, SIGUSR1);
+    kill(killer->pid, SIGSTOP);
 
     return nullptr;
 
@@ -163,18 +165,19 @@ void *memory_killer(void *args) {
     long mem[8];
 
     while (true) {
+        timespec delay = {0, 1000};
+        nanosleep(&delay, nullptr);
+
         if (kill(killer->pid, 0) == ESRCH) {
             break;
         }
-
-        timespec delay = {0, 25};
-        nanosleep(&delay, nullptr);
 
         if (nullptr == (proc = fopen(proc_file_path, "r"))) {
             break;
         }
         fgets(statm, 511, proc);
         fclose(proc);
+        puts(statm);
 
         p = statm;
         for (int i = 0; i < 7; i++) {
