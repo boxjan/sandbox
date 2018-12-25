@@ -177,7 +177,6 @@ void *memory_killer(void *args) {
         }
         fgets(statm, 511, proc);
         fclose(proc);
-        puts(statm);
 
         p = statm;
         for (int i = 0; i < 7; i++) {
