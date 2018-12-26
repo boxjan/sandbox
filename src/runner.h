@@ -25,6 +25,7 @@ struct RuntimeConfig {
     bool use_rlimit_to_limit_memory;
 
     string log_path;
+    bool is_debug;
     string scmp_name;
 
     int uid;

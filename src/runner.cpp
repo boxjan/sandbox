@@ -17,6 +17,9 @@
 
 int run(const RuntimeConfig &config, RuntimeResult &result) {
 
+    log::openFile(config.log_path.c_str());
+    config.is_debug ? log::isDebug() : void();
+
     // check args
     if ( (config.max_cpu_time!= -1 && config.max_cpu_time < 1) || (config.max_memory != -1 && config.max_memory < 1) ||
             (config.max_stack != -1 && config.max_stack < 1) || (config.max_output_size != -1 && config.max_output_size < 1 ) ||
@@ -175,10 +178,9 @@ void *memory_killer(void *args) {
         if (nullptr == (proc = fopen(proc_file_path, "r"))) {
             break;
         }
-        fgets(statm, 511, proc);
+        p = fgets(statm, 511, proc);
         fclose(proc);
 
-        p = statm;
         for (int i = 0; i < 7; i++) {
             mem[i] = strtol(p, &p, 10);
         }

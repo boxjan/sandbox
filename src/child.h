@@ -24,7 +24,9 @@ enum CHILD_EXIT_CODE {
     GET_EXEC_PATH_ERROR,
     GET_EXEC_ARGS_ERROR,
     GET_EXEC_ENV_ERROR,
+    SCMP_LOAD_FAIL,
     EXEC_ERROR,
+    OTHER_FAIL,
 };
 
 const char CHILD_EXIT_REASON[][32] = {
@@ -44,7 +46,9 @@ const char CHILD_EXIT_REASON[][32] = {
         "GET EXEC PATH ERROR",
         "GET EXEC ARGS ERROR",
         "GET EXEC ENV ERROR",
+        "SECCOMP RULE LOAD FAIL",
         "EXEC CAN NOT RUN",
+        "OTHER ERROR"
 };     //12345678123456781234567812345678
 
 void child(const RuntimeConfig &);

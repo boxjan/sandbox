@@ -5,6 +5,10 @@
 #ifndef SANDBOX_SCMP_H
 #define SANDBOX_SCMP_H
 
+#include <string>
+
+int load(const std::string&, const std::string&);
+
 
 
 #endif //SANDBOX_SCMP_H

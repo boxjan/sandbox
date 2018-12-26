@@ -13,6 +13,7 @@
 #include "child.h"
 #include "runner.h"
 #include "log.h"
+#include "scmp/scmp.h"
 
 const int MAX_ARGS = 128;
 const int BUFFER_SIZE = 1024;
@@ -122,6 +123,15 @@ void child(const RuntimeConfig &config) {
         }
     }
 
+    // set group id
+    if (config.gid != -1)
+    {
+        log::debug("set gid as: %d", config.gid);
+        if (setgid((gid_t) config.gid) == -1) {
+            CHILD_EXIT(SET_GID_FAIL);
+        }
+    }
+
     // set user id
     if (config.uid != -1){
         log::debug("set uid as: %d", config.uid);
@@ -130,12 +140,10 @@ void child(const RuntimeConfig &config) {
         }
     }
 
-    // set group id
-    if (config.gid != -1)
-    {
-        log::debug("set gid as: %d", config.gid);
-        if (setgid((gid_t) config.gid) == -1) {
-            CHILD_EXIT(SET_GID_FAIL);
+    if (config.uid != -1 || config.gid != -1) {
+        rlimit limit = {512, 768};
+        if (setrlimit(RLIMIT_NPROC, &limit) !=0) {
+            CHILD_EXIT(OTHER_FAIL);
         }
     }
 
@@ -176,6 +184,10 @@ void child(const RuntimeConfig &config) {
 
     // load seccomp
     if (! config.scmp_name.empty()) {
+        log::debug("load %s level seccomp rule", config.scmp_name.c_str());
+        if (load(config.scmp_name, config.exec_path) == -1) {
+            CHILD_EXIT(SCMP_LOAD_FAIL);
+        }
 
     }
 
