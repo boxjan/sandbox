@@ -2,3 +2,5 @@
 *.out
 *.class
 *.pyx
+*.exe
+cmake-build-debug/

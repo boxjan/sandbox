@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 
     arg.add<int>("uid", 'u', "set running user id", false);
     arg.add<int>("gid", 'g', "set running group id", false);
-    arg.add<string>("scmp_name", 'p', "set running seccomp rule name", false);
+    arg.add<string>("scmp_rule_name", 'p', "set running seccomp rule name", false);
     arg.add("no_change_child_id", 0, "if you run by root, with this will let child run by root too.");
     arg.add("use_rlimit_to_limit_memory", 0, "use rlimit to limit memory");
 
@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
 
     config.gid = arg.exist("gid") ? arg.get<int>("gid") : -1;
 
-    config.scmp_name = arg.exist("scmp_name") ? arg.get<string>("scmp_name") : "";
+    config.scmp_name = arg.exist("scmp_rule_name") ? arg.get<string>("scmp_rule_name") : "";
 
     config.use_rlimit_to_limit_memory =  arg.exist("use_rlimit_to_limit_memory");
 
