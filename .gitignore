@@ -3,4 +3,8 @@
 *.class
 *.pyx
 *.exe
+sandbox.so
+*.cmake
+CMakeCache.txt
+CMakeFiles/
 cmake-build-debug/
