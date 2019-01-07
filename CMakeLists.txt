@@ -13,4 +13,6 @@ add_executable(sandbox.so src/main.cpp src/runner.cpp src/child.cpp src/runner.h
 
 target_link_libraries(sandbox.so seccomp pthread)
 
-add_test(test test/)
+enable_testing()
+add_test(test python3 test/run_test.py 0)
+set_tests_properties(test PROPERTIES PASS_REGULAR_EXPRESSION "All is OK")
