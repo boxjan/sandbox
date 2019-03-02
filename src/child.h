@@ -54,7 +54,7 @@ const char CHILD_EXIT_REASON[][32] = {
 void child(const RuntimeConfig &);
 
 #define CHILD_EXIT(code) { \
-    log::error("child process exit because: %s", CHILD_EXIT_REASON[code]); \
+    LOG_ERROR("child process exit because: %s", CHILD_EXIT_REASON[code]); \
     close_file(IN_FILE); \
     close_file(OUT_FILE); \
     close_file(ERR_FILE); \

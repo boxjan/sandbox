@@ -21,26 +21,31 @@ private:
     FILE *log_file;
     bool is_debug;
     static Log *instance;
+    char log_path[1024];
 
-    static void writeLog(const LEVEL level, const char *format, va_list &args);
-    Log();
+    void writeLog(const char *message);
+    void writeToFile(const char *message);
+    void writeToStderr(const char *message);
+    void closeFile();
+
+    Log(const char * logPath, bool isDebug);
     ~Log();
 
 public:
     static Log *getInstance();
 
-    static void openFile(const char *file_path);
-    static void closeFile();
-
-    static void debug(const char *format, ...);
-    static void info(const char *format, ...);
-    static void warn(const char *format, ...);
-    static void error(const char *format, ...);
-
-    static void isDebug();
+    static void saveLog(int level, const char* file, int line, const char * function, const char * format, ...);
+    static void build(const char *logPath, bool isDebug);
 
 
 };
 
 typedef Log log;
+
+
+#define LOG_DEBUG(format, x...) log::saveLog(DEBUG, __FILE__, __LINE__, __FUNCTION__, format, ##x);
+#define LOG_INFO(format, x...) log::saveLog(INFO, __FILE__, __LINE__, __FUNCTION__, format, _##x);
+#define LOG_WARN(format, x...) log::saveLog(WARN, __FILE__, __LINE__, __FUNCTION__, format, ##x);
+#define LOG_ERROR(format, x...) log::saveLog(ERROR, __FILE__, __LINE__, __FUNCTION__, format, ##x);
+
 #endif //SANDBOX_LOG_H

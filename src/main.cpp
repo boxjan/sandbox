@@ -42,7 +42,6 @@ int main(int argc, char **argv) {
     RuntimeResult result;
     RuntimeConfig config;
 
-
     config.log_path = arg.exist("log_path") ? arg.get<string>("log_path") : "/dev/stderr";
     config.is_debug = arg.exist("verbose");
 

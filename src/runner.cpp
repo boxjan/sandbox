@@ -17,15 +17,14 @@
 
 int run(const RuntimeConfig &config, RuntimeResult &result) {
 
-    log::openFile(config.log_path.c_str());
-    config.is_debug ? log::isDebug() : void();
+    Log::build(config.log_path.c_str(), config.is_debug);
 
     // check args
     if ( (config.max_cpu_time!= -1 && config.max_cpu_time < 1) || (config.max_memory != -1 && config.max_memory < 1) ||
             (config.max_stack != -1 && config.max_stack < 1) || (config.max_output_size != -1 && config.max_output_size < 1 ) ||
             (config.max_open_file_number != -1 && config.max_open_file_number < 1) || (config.uid != -1 && config.uid < 0) ||
             (config.gid != -1 && config.gid < 0) ) {
-        log::error("procecc exit because %s", "bad args invalid");
+        LOG_ERROR("procecc exit because %s", "bad args invalid");
         exit(1);
     }
 
@@ -50,7 +49,7 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
     // new thread to kill child if it spend to much time
     pthread_t timeout_tid = 0, memory_tid = 0;
     if (config.max_cpu_time != -1) {
-        log::debug("timeout killer up");
+       LOG_DEBUG("timeout killer up");
         timeoutKillerStruct killerStruct(pid, config.max_cpu_time);
         if (pthread_create(&timeout_tid, nullptr, timeout_killer, (void *) (&killerStruct)) != 0) {
             kill(pid, SIGKILL);
@@ -65,8 +64,8 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
 
     // new thread to kill child if it use to much memory
     if (config.max_memory != -1 && !config.use_rlimit_to_limit_memory) {
-        log::debug("use killer to limit memory");
-        log::debug("memory limit: %d bytes %d kb", config.max_memory * 1024, config.max_memory);
+        LOG_DEBUG("use killer to limit memory");
+        LOG_DEBUG("memory limit: %d bytes %d kb", config.max_memory * 1024, config.max_memory);
         memoryKillerStruct killerStruct(pid, config.max_memory);
         if (pthread_create(&memory_tid, nullptr, memory_killer, (void *) (&killerStruct)) != 0) {
             kill(pid, SIGKILL);
@@ -146,7 +145,7 @@ void *timeout_killer(void *args) {
     timespec delay = {killer->time / 1000, (killer->time % 1000 + 100) * 1000000};
 
     if (nanosleep(&delay, nullptr) != 0) {
-        log::warn("It still have time, why the time out killer wake up?");
+        LOG_WARN("It still have time, why the time out killer wake up?");
         kill(killer->pid, SIGKILL);
     }
 

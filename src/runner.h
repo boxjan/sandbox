@@ -114,7 +114,7 @@ void *timeout_killer(void*);
 
 void *memory_killer(void*);
 
-#define RUN_EXIT(code) log::error("procecc exit because %s", RUN_EXIT_REASON[code]); exit(0);
+#define RUN_EXIT(code) LOG_ERROR("procecc exit because %s", RUN_EXIT_REASON[code]); exit(0);
 
 
 #endif //SANDBOX_RUNNER_H

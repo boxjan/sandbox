@@ -18,6 +18,6 @@ int load(const std::string &rule_name, const std::string &exec_path) {
     } else if (rule_name == "strict") {
         return load_strict_rule(exec_path);
     }
-    log::error("can not load %s seccomp rule", rule_name.c_str());
+   LOG_ERROR("can not load %s seccomp rule", rule_name.c_str());
     return -1;
 }
