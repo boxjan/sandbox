@@ -6,6 +6,7 @@ project(sandbox)
 add_compile_options(-pie)
 add_compile_options(-O2)
 add_compile_options(-Wall)
+#add_compile_options(-g)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
