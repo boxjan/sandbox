@@ -1,6 +1,13 @@
 .idea
 *.out
 *.class
-*.pyx
+*.pyc
 *.exe
+sandbox.so
+*.cmake
+Testing
+__pycache__/
+CMakeCache.txt
+CMakeFiles/
 cmake-build-debug/
+Makefile
