@@ -10,6 +10,8 @@
 #include <sys/wait.h>
 #include <pthread.h>
 #include <sched.h>
+#include <cstdlib>
+#include <cerrno>
 
 #include "child.h"
 #include "runner.h"
@@ -17,7 +19,7 @@
 
 int run(const RuntimeConfig &config, RuntimeResult &result) {
 
-    Log::build(config.log_path.c_str(), config.is_debug);
+    Log::build(config.log_path, config.is_debug);
 
     // check args
     if ( (config.max_cpu_time!= -1 && config.max_cpu_time < 1) || (config.max_memory != -1 && config.max_memory < 1) ||

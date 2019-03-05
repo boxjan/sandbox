@@ -85,9 +85,9 @@ void child(const RuntimeConfig &config) {
     }
 
     // open input file and mount to stdin
-    if (config.input_path != "/dev/stdin") {
-        LOG_DEBUG("try to open input file: %s", config.input_path.c_str());
-        IN_FILE = fopen(config.input_path.c_str(), "r");
+    if (strcmp(config.input_path, "/dev/stdin") != 0) {
+        LOG_DEBUG("try to open input file: %s", config.input_path);
+        IN_FILE = fopen(config.input_path, "r");
         if (IN_FILE == nullptr) {
             CHILD_EXIT(OPEN_INPUT_FILE_FAIL);
         }
@@ -98,9 +98,9 @@ void child(const RuntimeConfig &config) {
     }
 
     // open output file and mount to stdout
-    if (config.output_path != "/dev/stdout") {
-        LOG_DEBUG("try to open output file: %s", config.output_path.c_str());
-        OUT_FILE = fopen(config.output_path.c_str(), "w");
+    if (strcmp(config.output_path, "/dev/stdout") != 0) {
+        LOG_DEBUG("try to open output file: %s", config.output_path);
+        OUT_FILE = fopen(config.output_path, "w");
         if (OUT_FILE == nullptr) {
             CHILD_EXIT(OPEN_OUTPUT_FILE_FAIL);
         }
@@ -111,9 +111,9 @@ void child(const RuntimeConfig &config) {
     }
 
     // open error file and mount to stderr
-    if (config.error_path != "/dev/stderr") {
-        LOG_DEBUG("try to open error file: %s", config.error_path.c_str());
-        ERR_FILE = fopen(config.error_path.c_str(), "w");
+    if (strcmp(config.error_path, "/dev/stderr") != 0) {
+        LOG_DEBUG("try to open error file: %s", config.error_path);
+        ERR_FILE = fopen(config.error_path, "w");
         if (ERR_FILE == nullptr) {
             CHILD_EXIT(OPEN_ERROR_FILE_FAIL);
         }
@@ -155,10 +155,10 @@ void child(const RuntimeConfig &config) {
 
         int i = 0;
         char exec[BUFFER_SIZE];
-        args[i++] = strncpy(exec, config.exec_path.c_str(), BUFFER_SIZE - 1);
+        args[i++] = strncpy(exec, config.exec_path, BUFFER_SIZE - 1);
 
-        char *str = new char[config.exec_args.length() + 1];
-        strcpy(str, config.exec_args.c_str());
+        char *str = new char[strlen(config.exec_args) + 1];
+        strcpy(str, config.exec_args);
 
         args[i] = strtok(str, " ");
         while (args[i++]) {
@@ -167,14 +167,14 @@ void child(const RuntimeConfig &config) {
     }
 
     // cut env
-    char **env = (char **)0;
-    if (! config.exec_env.empty()) {
+    char **env = (char **) nullptr;
+    if ( strlen(config.exec_env) != 0) {
         env = (char **)malloc(MAX_ARGS * sizeof(char *));
         memset((char*)env, 0, sizeof(env));
         int i = 0;
 
-        char *str = new char[config.exec_env.length() + 1];
-        strcpy(str, config.exec_env.c_str());
+        char *str = new char[strlen(config.exec_env) + 1];
+        strcpy(str, config.exec_env);
 
         env[i] = strtok(str, " ");
         while (env[i++]) {
@@ -183,18 +183,18 @@ void child(const RuntimeConfig &config) {
     }
 
     // load seccomp
-    if (! config.scmp_name.empty()) {
-        LOG_DEBUG("load %s level seccomp rule", config.scmp_name.c_str());
+    if (strlen(config.scmp_name) != 0) {
+        LOG_DEBUG("load %s level seccomp rule", config.scmp_name);
         if (load(config.scmp_name, config.exec_path) == -1) {
             CHILD_EXIT(SCMP_LOAD_FAIL);
         }
 
     }
 
-    if (! config.exec_env.empty()) {
-        execvpe(config.exec_path.c_str(), args, env);
+    if (strlen(config.exec_env) != 0) {
+        execvpe(config.exec_path, args, env);
     } else {
-        execvp(config.exec_path.c_str(), args);
+        execvp(config.exec_path, args);
     }
 
     CHILD_EXIT(EXEC_ERROR);

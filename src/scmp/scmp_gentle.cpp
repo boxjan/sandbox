@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <string>
 
-int load_gentle_rule(const std::string &exec_path) {
+int load_gentle_rule(const char *exec_path) {
     int syscall_blacklist[] = {
             SCMP_SYS(socket),
             SCMP_SYS(setuid), SCMP_SYS(setgid),
@@ -35,7 +35,7 @@ int load_gentle_rule(const std::string &exec_path) {
         }
     }
 
-    if (seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(execve), 1, SCMP_A0(SCMP_CMP_NE, (scmp_datum_t)(exec_path.c_str()))) != 0) {
+    if (seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(execve), 1, SCMP_A0(SCMP_CMP_NE, (scmp_datum_t)(exec_path))) != 0) {
         return -1;
     }
 

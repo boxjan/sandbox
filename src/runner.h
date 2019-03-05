@@ -5,9 +5,6 @@
 #ifndef SANDBOX_RUNNER_H
 #define SANDBOX_RUNNER_H
 
-#include <string>
-using std::string;
-
 struct RuntimeConfig {
     int max_cpu_time;
     int max_stack;
@@ -15,18 +12,18 @@ struct RuntimeConfig {
     int max_output_size;
     int max_open_file_number;
 
-    string exec_path;
-    string exec_env;
-    string exec_args;
+    char *exec_path;
+    char *exec_env;
+    char *exec_args;
 
-    string input_path;
-    string output_path;
-    string error_path;
-    bool use_rlimit_to_limit_memory;
+    char *input_path;
+    char *output_path;
+    char *error_path;
+    char use_rlimit_to_limit_memory;
 
-    string log_path;
-    bool is_debug;
-    string scmp_name;
+    char * log_path;
+    char is_debug;
+    char *scmp_name;
 
     int uid;
     int gid;

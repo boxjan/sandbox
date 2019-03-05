@@ -7,8 +7,6 @@
 
 #include <string>
 
-int load(const std::string&, const std::string&);
-
-
+int load(const char *, const char *);
 
 #endif //SANDBOX_SCMP_H

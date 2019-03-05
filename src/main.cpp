@@ -10,6 +10,7 @@
 
 int main(int argc, char **argv) {
     using std::cout;
+    using std::string;
 
     cmdline::parser arg;
     arg.add<int>("max_cpu_time", 't', "set cpu time limit in micro seconds(ms)", false);
@@ -42,7 +43,8 @@ int main(int argc, char **argv) {
     RuntimeResult result;
     RuntimeConfig config;
 
-    config.log_path = arg.exist("log_path") ? arg.get<string>("log_path") : "/dev/stderr";
+    string log_path_str = arg.exist("log_path") ? arg.get<string>("log_path") : "/dev/stderr";
+    config.log_path = (char *) log_path_str.c_str();
     config.is_debug = arg.exist("verbose");
 
     // set config
@@ -56,23 +58,30 @@ int main(int argc, char **argv) {
 
     config.max_open_file_number = arg.exist("max_open_file_number") ? arg.get<int>("max_open_file_number") : -1;
 
-    config.exec_path = arg.get<string>("exec_path");
+    string exec_path_str = arg.get<string>("exec_path");
+    config.exec_path = (char *) exec_path_str.c_str();
 
-    config.exec_args = arg.exist("exec_args") ? arg.get<string>("exec_args") : "";
+    string exec_args_str = arg.exist("exec_args") ? arg.get<string>("exec_args") : "";
+    config.exec_args = (char *) exec_args_str.c_str();
 
-    config.exec_env = arg.exist("exec_env") ? arg.get<string>("exec_env") : "";
+    string exec_env_str = arg.exist("exec_env") ? arg.get<string>("exec_env") : "";
+    config.exec_env = (char *) exec_env_str.c_str();
 
-    config.input_path = arg.exist("input_path") ? arg.get<string>("input_path") : "/dev/stdin";
+    string input_path_str = arg.exist("input_path") ? arg.get<string>("input_path") : "/dev/stdin";
+    config.input_path = (char *) input_path_str.c_str();
 
-    config.output_path = arg.exist("output_path") ? arg.get<string>("output_path") : "/dev/stdout";
+    string output_path_str = arg.exist("output_path") ? arg.get<string>("output_path") : "/dev/stdout";
+    config.output_path = (char *) output_path_str.c_str();
 
-    config.error_path = arg.exist("error_path") ? arg.get<string>("error_path") : "/dev/stderr";
+    string error_path_str = arg.exist("error_path") ? arg.get<string>("error_path") : "/dev/stderr";
+    config.error_path = (char *) error_path_str.c_str();
 
     config.uid = arg.exist("uid") ? arg.get<int>("uid") : -1;
 
     config.gid = arg.exist("gid") ? arg.get<int>("gid") : -1;
 
-    config.scmp_name = arg.exist("scmp_rule_name") ? arg.get<string>("scmp_rule_name") : "";
+    string scmp_name_str = arg.exist("scmp_rule_name") ? arg.get<string>("scmp_rule_name") : "";
+    config.scmp_name = (char *) scmp_name_str.c_str();
 
     config.use_rlimit_to_limit_memory =  arg.exist("use_rlimit_to_limit_memory");
 

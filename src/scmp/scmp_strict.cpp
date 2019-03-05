@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-int load_strict_rule(const std::string &exec_path) {
+int load_strict_rule(const char *exec_path) {
 
         int syscall_whitelist[] = {
                 // file system(IO)
@@ -57,7 +57,7 @@ int load_strict_rule(const std::string &exec_path) {
         }
 
         // add extra rule for execve
-        if (seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1, SCMP_A0(SCMP_CMP_EQ, (scmp_datum_t)(exec_path.c_str()))) != 0) {
+        if (seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1, SCMP_A0(SCMP_CMP_EQ, (scmp_datum_t)(exec_path))) != 0) {
             return -1;
         }
         // do not allow "w" and "rw"

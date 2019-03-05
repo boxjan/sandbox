@@ -5,19 +5,20 @@
 #include "scmp.h"
 #include "../log.h"
 #include <string>
+#include <cstring>
 
 int load_compile_rule();
-int load_gentle_rule(const std::string &);
-int load_strict_rule(const std::string &);
+int load_gentle_rule(const char *);
+int load_strict_rule(const char *);
 
-int load(const std::string &rule_name, const std::string &exec_path) {
-    if (rule_name == "compile") {
+int load(const char *rule_name, const char *exec_path) {
+    if ( strcmp(rule_name, "compile") == 0 ) {
         return load_compile_rule();
-    } else if (rule_name == "gentle") {
+    } else if ( strcmp(rule_name, "gentle") == 0 ) {
         return load_gentle_rule(exec_path);
-    } else if (rule_name == "strict") {
+    } else if ( strcmp(rule_name, "strict") == 0 ) {
         return load_strict_rule(exec_path);
     }
-   LOG_ERROR("can not load %s seccomp rule", rule_name.c_str());
+   LOG_ERROR("can not load %s seccomp rule", rule_name);
     return -1;
 }
