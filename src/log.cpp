@@ -84,13 +84,12 @@ void Log::writeLog(const char *message) {
 void Log::writeToFile(const char *message) {
     int count = (int) strlen(message);
 
-    int log_fd = fileno((FILE *) getInstance()->log_file);
-    if (flock(log_fd, LOCK_EX) == 0) {
+    int log_fd = fileno(getInstance()->log_file);
+    if ( flock(log_fd, LOCK_EX) == 0 ) {
         if (write(log_fd, message, (size_t) count) < 0) {
             fprintf(stderr, "Can not write log into File: %s, will write into stderr\n", this->log_path);
             this->closeFile();
             writeLog(message);
-            return;
         }
         flock(log_fd, LOCK_UN);
     } else {
