@@ -17,21 +17,21 @@
 #include "runner.h"
 #include "log.h"
 
-int run(const RuntimeConfig &config, RuntimeResult &result) {
+int run(const RuntimeConfig *config, RuntimeResult *result) {
 
-    Log::build(config.log_path, config.is_debug);
+    Log::build(config->log_path, config->is_debug);
 
     // check args
-    if ( (config.max_cpu_time!= -1 && config.max_cpu_time < 1) || (config.max_memory != -1 && config.max_memory < 1) ||
-            (config.max_stack != -1 && config.max_stack < 1) || (config.max_output_size != -1 && config.max_output_size < 1 ) ||
-            (config.max_open_file_number != -1 && config.max_open_file_number < 1) || (config.uid != -1 && config.uid < 0) ||
-            (config.gid != -1 && config.gid < 0) ) {
+    if ( (config->max_cpu_time!= -1 && config->max_cpu_time < 1) || (config->max_memory != -1 && config->max_memory < 1) ||
+            (config->max_stack != -1 && config->max_stack < 1) || (config->max_output_size != -1 && config->max_output_size < 1 ) ||
+            (config->max_open_file_number != -1 && config->max_open_file_number < 1) || (config->uid != -1 && config->uid < 0) ||
+            (config->gid != -1 && config->gid < 0) ) {
         LOG_ERROR("procecc exit because %s", "bad args invalid");
         exit(1);
     }
 
     // you need root to set user/group id.
-    if (config.uid != -1 || config.gid != -1) {
+    if (config->uid != -1 || config->gid != -1) {
         if (getuid() != 0) {
             RUN_EXIT(NOT_RUNNING_BY_ROOT);
         }
@@ -50,9 +50,9 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
 
     // new thread to kill child if it spend to much time
     pthread_t timeout_tid = 0, memory_tid = 0;
-    if (config.max_cpu_time != -1) {
+    if (config->max_cpu_time != -1) {
        LOG_DEBUG("timeout killer up");
-        timeoutKillerStruct killerStruct(pid, config.max_cpu_time);
+        timeoutKillerStruct killerStruct(pid, config->max_cpu_time);
         if (pthread_create(&timeout_tid, nullptr, timeout_killer, (void *) (&killerStruct)) != 0) {
             kill(pid, SIGKILL);
             RUN_EXIT(KILLER_THREAD_UP_FAIL);
@@ -65,10 +65,10 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
     }
 
     // new thread to kill child if it use to much memory
-    if (config.max_memory != -1 && !config.use_rlimit_to_limit_memory) {
+    if (config->max_memory != -1 && !config->use_rlimit_to_limit_memory) {
         LOG_DEBUG("use killer to limit memory");
-        LOG_DEBUG("memory limit: %d bytes %d kb", config.max_memory * 1024, config.max_memory);
-        memoryKillerStruct killerStruct(pid, config.max_memory);
+        LOG_DEBUG("memory limit: %d bytes %d kb", config->max_memory * 1024, config->max_memory);
+        memoryKillerStruct killerStruct(pid, config->max_memory);
         if (pthread_create(&memory_tid, nullptr, memory_killer, (void *) (&killerStruct)) != 0) {
             kill(pid, SIGKILL);
             RUN_EXIT(KILLER_THREAD_UP_FAIL);
@@ -92,47 +92,47 @@ int run(const RuntimeConfig &config, RuntimeResult &result) {
         pthread_cancel(timeout_tid);
     }
 
-    result.status = status;
-    result.cpu_time =
+    result->status = status;
+    result->cpu_time =
             (int) usage.ru_stime.tv_sec * 1000 + (int) usage.ru_stime.tv_usec / 1000 +
             (int) usage.ru_utime.tv_sec * 1000 + (int) usage.ru_utime.tv_usec / 1000;
-    result.clock_time = (int) (end_at.tv_sec - start_at.tv_sec) * 1000 + (int) (end_at.tv_usec - start_at.tv_usec) / 1000;
-    result.memory_use = (int) usage.ru_maxrss;
+    result->clock_time = (int) (end_at.tv_sec - start_at.tv_sec) * 1000 + (int) (end_at.tv_usec - start_at.tv_usec) / 1000;
+    result->memory_use = (int) usage.ru_maxrss;
 
     getrusage(RUSAGE_CHILDREN, &usage);
 
     if (WIFSIGNALED(status)) {
-        result.signal = WTERMSIG(status);
+        result->signal = WTERMSIG(status);
     }
 
     if (WIFEXITED(status)) {
-        result.exit_code = WEXITSTATUS(status);
+        result->exit_code = WEXITSTATUS(status);
     }
 
-    if (result.signal == SIGUSR2) {
+    if (result->signal == SIGUSR2) {
 
-        result.result = SYSTEM_ERROR;
+        result->result = SYSTEM_ERROR;
 
     } else {
 
-        if (result.exit_code != 0 || result.signal != 0 || result.status != 0) {
-            result.result = RUNTIME_ERROR;
+        if (result->exit_code != 0 || result->signal != 0 || result->status != 0) {
+            result->result = RUNTIME_ERROR;
         }
 
-        if (result.signal == SIGSYS) {
-            result.result = RUNTIME_ERROR_BAD_SYSCALL;
+        if (result->signal == SIGSYS) {
+            result->result = RUNTIME_ERROR_BAD_SYSCALL;
         }
 
-        if (config.max_cpu_time != -1 && ( result.status == 4991 || result.clock_time > config.max_cpu_time || result.cpu_time > config.max_cpu_time)) {
-            result.result = TIME_LIMIT_EXCEEDED;
+        if (config->max_cpu_time != -1 && ( result->status == 4991 || result->clock_time > config->max_cpu_time || result->cpu_time > config->max_cpu_time)) {
+            result->result = TIME_LIMIT_EXCEEDED;
         }
 
-        if (result.signal == SIGXFSZ) {
-            result.result = OUTPUT_LIMIT_EXCEEDED;
+        if (result->signal == SIGXFSZ) {
+            result->result = OUTPUT_LIMIT_EXCEEDED;
         }
 
-        if (result.signal == SIGSEGV && -1 != config.max_memory && result.memory_use > config.max_memory) {
-            result.result = MEMORY_LIMIT_EXCEEDED;
+        if (result->signal == SIGSEGV && -1 != config->max_memory && result->memory_use > config->max_memory) {
+            result->result = MEMORY_LIMIT_EXCEEDED;
         }
 
     }

@@ -105,9 +105,17 @@ struct memoryKillerStruct {
     }
 };
 
-int run(const RuntimeConfig &config, RuntimeResult &result);
+
 
 void *timeout_killer(void*);
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
+    int run(const RuntimeConfig *config, RuntimeResult *result);
+#ifdef __cplusplus
+}
+#endif
 
 void *memory_killer(void*);
 

@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    run(config, result);
+    run(&config, &result);
 
     printf("{\n"
            "  \"CPU_TIME\": %d,\n"

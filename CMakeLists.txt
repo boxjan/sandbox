@@ -3,11 +3,11 @@ project(sandbox)
 
 set(GENERATE_NAME libsandbox.so)
 
-#set(CMAKE_VERBOSE_MAKEFILE ON)
 
 add_compile_options(-pie)
 add_compile_options(-O2)
 add_compile_options(-Wall)
+add_compile_options(-fPIC)
 #add_compile_options(-g)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

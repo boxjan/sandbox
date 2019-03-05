@@ -51,7 +51,7 @@ const char CHILD_EXIT_REASON[][32] = {
         "OTHER ERROR"
 };     //12345678123456781234567812345678
 
-void child(const RuntimeConfig &);
+void child(const RuntimeConfig *);
 
 #define CHILD_EXIT(code) { \
     LOG_ERROR("child process exit because: %s", CHILD_EXIT_REASON[code]); \
