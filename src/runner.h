@@ -30,6 +30,7 @@ struct RuntimeConfig {
 };
 
 enum RUN_EXIT_CODE {
+    ARGS_INVALID,
     NOT_RUNNING_BY_ROOT,
     FORK_FAIL,
     WAIT_ERROR,
@@ -39,6 +40,7 @@ enum RUN_EXIT_CODE {
 };
 
 const char RUN_EXIT_REASON[][32] = {
+        "ARGS INVALID",
         "NOT RUNNING BY ROOT",
         "FORK FAIL",
         "WAIT PID ERROR",
@@ -119,7 +121,7 @@ void *timeout_killer(void*);
 
 void *memory_killer(void*);
 
-#define RUN_EXIT(code) LOG_ERROR("procecc exit because %s", RUN_EXIT_REASON[code]); exit(0);
+#define RUN_EXIT(code) LOG_ERROR("procecc exit because %s", RUN_EXIT_REASON[code]); return -1;
 
 
 #endif //SANDBOX_RUNNER_H

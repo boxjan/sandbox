@@ -27,7 +27,7 @@ int run(const RuntimeConfig *config, RuntimeResult *result) {
             (config->max_open_file_number != -1 && config->max_open_file_number < 1) || (config->uid != -1 && config->uid < 0) ||
             (config->gid != -1 && config->gid < 0) ) {
         LOG_ERROR("procecc exit because %s", "bad args invalid");
-        exit(1);
+        RUN_EXIT(ARGS_INVALID);
     }
 
     // you need root to set user/group id.
