@@ -20,6 +20,9 @@ Log::Log(const char *log_path_ptr, bool is_debug) {
     } else {
         strncpy(this->log_path, log_path_ptr, 1024);
         log_file = fopen(log_path_ptr, "a+");
+        if (log_file == nullptr) {
+            fprintf(stderr, "Can not write log into File: %s, will write into stderr\n", this->log_path);
+        }
     }
     this->is_debug = is_debug;
 }
