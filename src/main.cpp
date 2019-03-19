@@ -13,11 +13,13 @@ int main(int argc, char **argv) {
     using std::string;
 
     cmdline::parser arg;
-    arg.add<int>("max_cpu_time", 't', "set cpu time limit in micro seconds(ms)", false);
+    arg.add<int>("max_time", 't', "set time limit in micro seconds(ms)", false);
+    arg.add<int>("max_cpu_time", 'b', "set cpu time limit in micro seconds(ms)", false);
     arg.add<int>("max_stack", 's', "set process stack limit(kb)", false);
     arg.add<int>("max_memory", 'm', "set memory limit(kb)", false);
     arg.add<int>("max_output_size", 'q', "set output limit(byte)", false);
     arg.add<int>("max_open_file_number", 'f', "set program open file number limit", false);
+    arg.add<int>("max_thread", 'r', "set process thread num", false);
 
     arg.add<string>("exec_path", 'c', "set executable file path", true);
     arg.add<string>("exec_args", 'a', "set exec arg, if have more than one args, use quotes", false);
@@ -48,6 +50,8 @@ int main(int argc, char **argv) {
     config.is_debug = arg.exist("verbose");
 
     // set config
+    config.max_time = arg.exist("max_time") ? arg.get<int>("max_time") : -1;
+
     config.max_cpu_time = arg.exist("max_cpu_time") ? arg.get<int>("max_cpu_time") : -1;
 
     config.max_stack = arg.exist("max_stack") ? arg.get<int>("max_stack") : -1;
@@ -57,6 +61,8 @@ int main(int argc, char **argv) {
     config.max_output_size = arg.exist("max_output_size") ? arg.get<int>("max_output_size") : -1;
 
     config.max_open_file_number = arg.exist("max_open_file_number") ? arg.get<int>("max_open_file_number") : -1;
+
+    config.max_thread = arg.exist("max_thread") ? arg.get<int>("max_thread") : -1;
 
     string exec_path_str = arg.get<string>("exec_path");
     config.exec_path = (char *) exec_path_str.c_str();

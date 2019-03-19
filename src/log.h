@@ -44,7 +44,7 @@ typedef Log log;
 
 
 #define LOG_DEBUG(format, x...) log::saveLog(DEBUG, __FILE__, __LINE__, __FUNCTION__, format, ##x);
-#define LOG_INFO(format, x...) log::saveLog(INFO, __FILE__, __LINE__, __FUNCTION__, format, _##x);
+#define LOG_INFO(format, x...) log::saveLog(INFO, __FILE__, __LINE__, __FUNCTION__, format, ##x);
 #define LOG_WARN(format, x...) log::saveLog(WARN, __FILE__, __LINE__, __FUNCTION__, format, ##x);
 #define LOG_ERROR(format, x...) log::saveLog(ERROR, __FILE__, __LINE__, __FUNCTION__, format, ##x);
 

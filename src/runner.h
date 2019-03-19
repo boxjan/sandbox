@@ -6,11 +6,13 @@
 #define SANDBOX_RUNNER_H
 
 struct RuntimeConfig {
+    int max_time;
     int max_cpu_time;
     int max_stack;
     int max_memory;
     int max_output_size;
     int max_open_file_number;
+    int max_thread;
 
     char *exec_path;
     char *exec_env;
@@ -89,27 +91,15 @@ struct RuntimeResult {
     };
 };
 
-struct timeoutKillerStruct {
-    pid_t pid;
-    int time;
-    timeoutKillerStruct(pid_t pid, int time) {
-        this->pid = pid;
-        this->time = time;
-    }
-};
-
-struct memoryKillerStruct {
+struct killerStruct {
     pid_t pid;
     int limit;
-    memoryKillerStruct(pid_t pid, int limit) {
-        this->pid = pid;
-        this->limit = limit;
-    }
 };
-
 
 
 void *timeout_killer(void*);
+void *memory_killer(void*);
+void *thread_killer(void*);
 
 #ifdef __cplusplus
     extern "C" {
@@ -119,7 +109,7 @@ void *timeout_killer(void*);
 }
 #endif
 
-void *memory_killer(void*);
+
 
 #define RUN_EXIT(code) LOG_ERROR("procecc exit because %s", RUN_EXIT_REASON[code]); return -1;
 

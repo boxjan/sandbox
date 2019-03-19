@@ -12,6 +12,8 @@
 #include <sched.h>
 #include <cstdlib>
 #include <cerrno>
+#include <cstring>
+#include <cstdio>
 
 #include "child.h"
 #include "runner.h"
@@ -48,17 +50,18 @@ int run(const RuntimeConfig *config, RuntimeResult *result) {
         RUN_EXIT(FORK_FAIL);
     }
 
+    LOG_DEBUG("Chile Pid: %d", pid);
+
     // new thread to kill child if it spend to much time
-    pthread_t timeout_tid = 0, memory_tid = 0;
-    if (config->max_cpu_time != -1) {
-       LOG_DEBUG("timeout killer up");
-        timeoutKillerStruct killerStruct(pid, config->max_cpu_time);
-        if (pthread_create(&timeout_tid, nullptr, timeout_killer, (void *) (&killerStruct)) != 0) {
+    pthread_t timeout_killer_tid = 0, memory_killer_tid = 0, thread_killer_tid = 0;
+    if (config->max_time != -1) {
+        killerStruct *timeout_killer_struct = new killerStruct{pid, config->max_time};
+        if (pthread_create(&timeout_killer_tid, nullptr, timeout_killer, (void *) (timeout_killer_struct)) != 0) {
             kill(pid, SIGKILL);
             RUN_EXIT(KILLER_THREAD_UP_FAIL);
         }
 
-        if (pthread_detach(timeout_tid) != 0) {
+        if (pthread_detach(timeout_killer_tid) != 0) {
             kill(pid, SIGKILL);
             RUN_EXIT(THREAD_DETACH_FAIL);
         }
@@ -66,31 +69,47 @@ int run(const RuntimeConfig *config, RuntimeResult *result) {
 
     // new thread to kill child if it use to much memory
     if (config->max_memory != -1 && !config->use_rlimit_to_limit_memory) {
-        LOG_DEBUG("use killer to limit memory");
         LOG_DEBUG("memory limit: %d bytes %d kb", config->max_memory * 1024, config->max_memory);
-        memoryKillerStruct killerStruct(pid, config->max_memory);
-        if (pthread_create(&memory_tid, nullptr, memory_killer, (void *) (&killerStruct)) != 0) {
+        killerStruct *memory_killer_struct = new killerStruct {pid, config->max_memory};
+        if (pthread_create(&memory_killer_tid, nullptr, memory_killer, (void *) (memory_killer_struct)) != 0) {
             kill(pid, SIGKILL);
             RUN_EXIT(KILLER_THREAD_UP_FAIL);
         }
 
-        if (pthread_detach(memory_tid) != 0) {
+        if (pthread_detach(memory_killer_tid) != 0) {
             kill(pid, SIGKILL);
             RUN_EXIT(THREAD_DETACH_FAIL);
         }
     }
 
-    struct rusage usage;
+    // new thread to kill child if it use clone too much thread
+   {
+        int thread_limit = config->max_thread;
+        LOG_DEBUG("use killer to limit thread num");
+        if (thread_limit < 1) {
+            LOG_INFO("Not set max thread, default 8");
+            thread_limit = 8;
+        }
+        LOG_DEBUG("limit thread limit: %d", thread_limit);
+        killerStruct *thread_killer_struct = new killerStruct{pid, thread_limit};
+        if (pthread_create(&thread_killer_tid, nullptr, thread_killer, (void *) (thread_killer_struct)) != 0) {
+            kill(pid, SIGKILL);
+            RUN_EXIT(KILLER_THREAD_UP_FAIL);
+        }
+
+        if (pthread_detach(thread_killer_tid) != 0) {
+            kill(pid, SIGKILL);
+            RUN_EXIT(THREAD_DETACH_FAIL);
+        }
+    }
+
+    struct rusage usage{};
     int status;
     if (wait4(pid, &status, WSTOPPED, &usage) == -1) {
         kill(pid, SIGKILL);
         RUN_EXIT(WAIT_ERROR);
     }
     gettimeofday(&end_at, nullptr);
-
-    if (! (timeout_tid != 0 && pthread_kill(timeout_tid, 0) == ESRCH )) {
-        pthread_cancel(timeout_tid);
-    }
 
     result->status = status;
     result->cpu_time =
@@ -134,7 +153,6 @@ int run(const RuntimeConfig *config, RuntimeResult *result) {
         if (result->signal == SIGSEGV && -1 != config->max_memory && result->memory_use > config->max_memory) {
             result->result = MEMORY_LIMIT_EXCEEDED;
         }
-
     }
 
     return 0;
@@ -142,15 +160,25 @@ int run(const RuntimeConfig *config, RuntimeResult *result) {
 }
 
 void *timeout_killer(void *args) {
-    auto *killer = (timeoutKillerStruct *)args;
+    auto *killer = static_cast<killerStruct*>(args);
+    if (killer->pid == 0) {
+        LOG_ERROR("Timeout killer can not get pid");
+        return nullptr;
+    }
+    LOG_DEBUG("timeout killer up");
 
-    timespec delay = {killer->time / 1000, (killer->time % 1000 + 100) * 1000000};
+    timespec delay = {killer->limit / 1000, (killer->limit % 1000 + 100) * 1000000};
 
     if (nanosleep(&delay, nullptr) != 0) {
         LOG_WARN("It still have time, why the time out killer wake up?");
         kill(killer->pid, SIGKILL);
     }
 
+    if (kill(killer->pid, 0) == ESRCH) {
+        return nullptr;
+    }
+
+    LOG_WARN("Timeout Kill Work!");
     kill(killer->pid, SIGSTOP);
 
     return nullptr;
@@ -158,39 +186,112 @@ void *timeout_killer(void *args) {
 }
 
 void *memory_killer(void *args) {
-    auto *killer = (memoryKillerStruct *) args;
+    auto *killer = static_cast<killerStruct*>(args);
+
+    if (killer->pid == 0) {
+        LOG_ERROR("Memory killer can not get pid");
+        return nullptr;
+    }
+
     int pagesize = getpagesize() / 1024;
+    LOG_DEBUG("memory killer up");
 
     FILE *proc;
     char proc_file_path[1024];
-    snprintf(proc_file_path, 1023, "/proc/%d/statm", killer->pid);
+    snprintf(proc_file_path, 1023, "/proc/%d/statm", (int) killer->pid);
 
     char statm[512], *p;
     long mem[8];
 
-    while (true) {
-        timespec delay = {0, 1000};
-        nanosleep(&delay, nullptr);
+    timespec delay{};
 
-        if (kill(killer->pid, 0) == ESRCH) {
-            break;
-        }
+    while (true) {
+
 
         if (nullptr == (proc = fopen(proc_file_path, "r"))) {
+            if (kill(killer->pid, 0) == 0) {
+                LOG_WARN("Can not open %s", proc_file_path);
+            }
             break;
         }
+
+
         p = fgets(statm, 511, proc);
         fclose(proc);
 
-        for (int i = 0; i < 7; i++) {
-            mem[i] = strtol(p, &p, 10);
-        }
+        for (int i = 0; i < 7; i++) mem[i] = strtol(p, &p, 10);
 
         if (mem[1] * pagesize > killer->limit) {
+            LOG_WARN("Memory Kill Work!");
             kill(killer->pid, SIGSEGV);
             break;
         }
+
+        delay = {0, 1000};
+        nanosleep(&delay, nullptr);
+
     }
 
     return nullptr;
+}
+
+void *thread_killer(void *args) {
+    auto *killer = static_cast<killerStruct*>(args);
+    if (killer->pid == 0) {
+        LOG_ERROR("Thread killer can not get pid");
+        return nullptr;
+    }
+
+    LOG_DEBUG("thread killer up");
+
+    FILE *proc;
+    char proc_file_path[1024];
+    snprintf(proc_file_path, 1023, "/proc/%d/status",  (int) killer->pid);
+
+    timespec delay{};
+    char line[1024];
+    int thread_count;
+
+    while (true) {
+
+        if (nullptr == (proc = fopen(proc_file_path, "r"))) {
+            if (kill(killer->pid, 0) == 0) {
+                LOG_WARN("Can not open %s", proc_file_path);
+            }
+            break;
+        }
+
+        while (feof(proc) == 0) {
+            if (nullptr == fgets(line, 1023, proc) && kill(killer->pid, 0) == 0) {
+                if (errno != 0) {
+                    int eno = errno;
+                    LOG_ERROR("Try to read proc file error! Errno: %d", eno);
+                    kill(killer->pid, SIGKILL);
+                    return nullptr;
+                }
+            }
+
+            if (line[0] != 'T') continue;
+
+            if (strstr(line, "Threads") != nullptr) break;
+        }
+
+        fclose(proc);
+
+        if (sscanf(line, "%*s %d", &thread_count) == 0) {
+            LOG_WARN("Try to sscanf from `%d` error!", line);
+            continue;
+        }
+
+        if (thread_count > killer->limit) {
+            LOG_WARN("Thread Kill Work!");
+            kill(killer->pid, SIGKILL);
+            break;
+        }
+
+        delay = {0, 1000};
+        nanosleep(&delay, nullptr);
+    }
+    return nullptr;
+
 }
