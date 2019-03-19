@@ -163,26 +163,26 @@ void *timeout_killer(void *args) {
     auto *killer = static_cast<killerStruct*>(args);
     if (killer->pid == 0) {
         LOG_ERROR("Timeout killer can not get pid");
-        return nullptr;
+    } else {
+        LOG_DEBUG("timeout killer up");
+
+        timespec delay = {killer->limit / 1000, (killer->limit % 1000 + 100) * 1000000};
+
+        if (nanosleep(&delay, nullptr) != 0) {
+            LOG_WARN("It still have time, why the time out killer wake up?");
+            kill(killer->pid, SIGKILL);
+        }
+
+        if (kill(killer->pid, 0) != ESRCH) {
+            LOG_WARN("Timeout Kill Work!");
+            kill(killer->pid, SIGSTOP);
+        }
+
     }
-    LOG_DEBUG("timeout killer up");
-
-    timespec delay = {killer->limit / 1000, (killer->limit % 1000 + 100) * 1000000};
-
-    if (nanosleep(&delay, nullptr) != 0) {
-        LOG_WARN("It still have time, why the time out killer wake up?");
-        kill(killer->pid, SIGKILL);
-    }
-
-    if (kill(killer->pid, 0) == ESRCH) {
-        return nullptr;
-    }
-
-    LOG_WARN("Timeout Kill Work!");
-    kill(killer->pid, SIGSTOP);
 
     delete killer;
     return nullptr;
+
 
 }
 
@@ -191,46 +191,42 @@ void *memory_killer(void *args) {
 
     if (killer->pid == 0) {
         LOG_ERROR("Memory killer can not get pid");
-        return nullptr;
-    }
+    } else {
+        int pagesize = getpagesize() / 1024;
+        LOG_DEBUG("memory killer up");
 
-    int pagesize = getpagesize() / 1024;
-    LOG_DEBUG("memory killer up");
+        FILE *proc;
+        char proc_file_path[1024];
+        snprintf(proc_file_path, 1023, "/proc/%d/statm", (int) killer->pid);
 
-    FILE *proc;
-    char proc_file_path[1024];
-    snprintf(proc_file_path, 1023, "/proc/%d/statm", (int) killer->pid);
+        char statm[512], *p;
+        long mem[8];
 
-    char statm[512], *p;
-    long mem[8];
+        timespec delay{};
 
-    timespec delay{};
+        while (true) {
 
-    while (true) {
-
-
-        if (nullptr == (proc = fopen(proc_file_path, "r"))) {
-            if (kill(killer->pid, 0) == 0) {
-                LOG_WARN("Can not open %s", proc_file_path);
+            if (nullptr == (proc = fopen(proc_file_path, "r"))) {
+                if (kill(killer->pid, 0) == 0) {
+                    LOG_WARN("Can not open %s", proc_file_path);
+                }
+                break;
             }
-            break;
+
+            p = fgets(statm, 511, proc);
+            fclose(proc);
+
+            for (int i = 0; i < 7; i++) mem[i] = strtol(p, &p, 10);
+
+            if (mem[1] * pagesize > killer->limit) {
+                LOG_WARN("Memory Kill Work!");
+                kill(killer->pid, SIGSEGV);
+                break;
+            }
+
+            delay = {0, 1000};
+            nanosleep(&delay, nullptr);
         }
-
-
-        p = fgets(statm, 511, proc);
-        fclose(proc);
-
-        for (int i = 0; i < 7; i++) mem[i] = strtol(p, &p, 10);
-
-        if (mem[1] * pagesize > killer->limit) {
-            LOG_WARN("Memory Kill Work!");
-            kill(killer->pid, SIGSEGV);
-            break;
-        }
-
-        delay = {0, 1000};
-        nanosleep(&delay, nullptr);
-
     }
 
     delete killer;
@@ -241,58 +237,60 @@ void *thread_killer(void *args) {
     auto *killer = static_cast<killerStruct*>(args);
     if (killer->pid == 0) {
         LOG_ERROR("Thread killer can not get pid");
-        return nullptr;
-    }
+    } else {
 
-    LOG_DEBUG("thread killer up");
+        LOG_DEBUG("thread killer up");
 
-    FILE *proc;
-    char proc_file_path[1024];
-    snprintf(proc_file_path, 1023, "/proc/%d/status",  (int) killer->pid);
+        FILE *proc;
+        char proc_file_path[1024];
+        snprintf(proc_file_path, 1023, "/proc/%d/status", (int) killer->pid);
 
-    timespec delay{};
-    char line[1024];
-    int thread_count;
+        timespec delay{};
+        char line[1024];
+        int thread_count;
 
-    while (true) {
+        while (true) {
 
-        if (nullptr == (proc = fopen(proc_file_path, "r"))) {
-            if (kill(killer->pid, 0) == 0) {
-                LOG_WARN("Can not open %s", proc_file_path);
-            }
-            break;
-        }
-
-        while (feof(proc) == 0) {
-            if (nullptr == fgets(line, 1023, proc) && kill(killer->pid, 0) == 0) {
-                if (errno != 0) {
-                    int eno = errno;
-                    LOG_ERROR("Try to read proc file error! Errno: %d", eno);
-                    kill(killer->pid, SIGKILL);
-                    return nullptr;
+            if (nullptr == (proc = fopen(proc_file_path, "r"))) {
+                if (kill(killer->pid, 0) == 0) {
+                    LOG_WARN("Can not open %s", proc_file_path);
                 }
+                break;
             }
 
-            if (line[0] != 'T') continue;
+            while (feof(proc) == 0) {
+                if (nullptr == fgets(line, 1023, proc) && kill(killer->pid, 0) == 0) {
+                    if (errno != 0) {
+                        int eno = errno;
+                        LOG_ERROR("Try to read proc file error! Errno: %d", eno);
+                        kill(killer->pid, SIGKILL);
 
-            if (strstr(line, "Threads") != nullptr) break;
+                        delete killer;
+                        return nullptr;
+                    }
+                }
+
+                if (line[0] != 'T') continue;
+
+                if (strstr(line, "Threads") != nullptr) break;
+            }
+
+            fclose(proc);
+
+            if (sscanf(line, "%*s %d", &thread_count) == 0) {
+                LOG_WARN("Try to sscanf from `%d` error!", line);
+                continue;
+            }
+
+            if (thread_count > killer->limit) {
+                LOG_WARN("Thread Kill Work!");
+                kill(killer->pid, SIGKILL);
+                break;
+            }
+
+            delay = {0, 1000};
+            nanosleep(&delay, nullptr);
         }
-
-        fclose(proc);
-
-        if (sscanf(line, "%*s %d", &thread_count) == 0) {
-            LOG_WARN("Try to sscanf from `%d` error!", line);
-            continue;
-        }
-
-        if (thread_count > killer->limit) {
-            LOG_WARN("Thread Kill Work!");
-            kill(killer->pid, SIGKILL);
-            break;
-        }
-
-        delay = {0, 1000};
-        nanosleep(&delay, nullptr);
     }
 
     delete killer;
