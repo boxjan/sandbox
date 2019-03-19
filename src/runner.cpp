@@ -181,6 +181,7 @@ void *timeout_killer(void *args) {
     LOG_WARN("Timeout Kill Work!");
     kill(killer->pid, SIGSTOP);
 
+    delete killer;
     return nullptr;
 
 }
@@ -232,6 +233,7 @@ void *memory_killer(void *args) {
 
     }
 
+    delete killer;
     return nullptr;
 }
 
@@ -292,6 +294,8 @@ void *thread_killer(void *args) {
         delay = {0, 1000};
         nanosleep(&delay, nullptr);
     }
+
+    delete killer;
     return nullptr;
 
 }
