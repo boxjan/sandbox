@@ -51,13 +51,13 @@ void Log::saveLog(int level, const char *file, int line, const char * function, 
     if (level == DEBUG && !getInstance()->is_debug)
         return;
 
-    static char message[one_line_max_size];
+    char message[one_line_max_size];
     va_list args;
     va_start(args, format);
     vsnprintf(message, one_line_max_size, format, args);
     va_end(args);
 
-    static char timeString[1024];
+    char timeString[1024];
     struct timeval tv;
     gettimeofday(&tv, nullptr);
 
