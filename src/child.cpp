@@ -141,7 +141,7 @@ void child(const RuntimeConfig *config) {
     }
 
     if (config->uid != -1 || config->gid != -1) {
-        rlimit limit = {512, 768};
+        rlimit limit = {3072, 4096};
         if (setrlimit(RLIMIT_NPROC, &limit) !=0) {
             CHILD_EXIT(OTHER_FAIL);
         }
