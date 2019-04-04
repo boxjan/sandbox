@@ -28,7 +28,6 @@ int run(const RuntimeConfig *config, RuntimeResult *result) {
             (config->max_stack != -1 && config->max_stack < 1) || (config->max_output_size != -1 && config->max_output_size < 1 ) ||
             (config->max_open_file_number != -1 && config->max_open_file_number < 1) || (config->uid != -1 && config->uid < 0) ||
             (config->gid != -1 && config->gid < 0) ) {
-        LOG_ERROR("procecc exit because %s", "bad args invalid");
         RUN_EXIT(ARGS_INVALID);
     }
 

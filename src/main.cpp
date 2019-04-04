@@ -102,21 +102,21 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (run(&config, &result) == 0) {
+    run(&config, &result);
 
-        printf("{\n"
-               "  \"CPU_TIME\": %d,\n"
-               "  \"CLOCK_TIME\": %d,\n"
-               "  \"MEMORY\": %d,\n"
-               "  \"STATUS\": %d,\n"
-               "  \"SIGNAL:\" %d,\n"
-               "  \"EXIT_CODE:\": %d,\n"
-               "  \"RESULT_CODE\": %d,\n"
-               "  \"RESULT\": \"%s\"\n"
-               "}\n",
-               result.cpu_time, result.clock_time,
-               result.memory_use, result.status,
-               result.signal, result.exit_code,
-               result.result, RESULT_STRING[result.result]);
-    }
+    printf("{\n"
+           "  \"CPU_TIME\": %d,\n"
+           "  \"CLOCK_TIME\": %d,\n"
+           "  \"MEMORY\": %d,\n"
+           "  \"STATUS\": %d,\n"
+           "  \"SIGNAL:\" %d,\n"
+           "  \"EXIT_CODE:\": %d,\n"
+           "  \"RESULT_CODE\": %d,\n"
+           "  \"RESULT\": \"%s\"\n"
+           "}\n",
+           result.cpu_time, result.clock_time,
+           result.memory_use, result.status,
+           result.signal, result.exit_code,
+           result.result, RESULT_STRING[result.result]);
+
 }

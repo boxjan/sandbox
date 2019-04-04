@@ -111,7 +111,10 @@ void *thread_killer(void*);
 
 
 
-#define RUN_EXIT(code) LOG_ERROR("procecc exit because %s", RUN_EXIT_REASON[code]); return -1;
+#define RUN_EXIT(code) { \
+result->result = SYSTEM_ERROR ; \
+LOG_ERROR("procecc exit because %s", RUN_EXIT_REASON[code]); return -1; \
+}
 
 
 #endif //SANDBOX_RUNNER_H
