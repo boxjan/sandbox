@@ -24,10 +24,11 @@ int run(const RuntimeConfig *config, RuntimeResult *result) {
     Log::build(config->log_path, config->is_debug);
 
     // check args
-    if ( (config->max_cpu_time!= -1 && config->max_cpu_time < 1) || (config->max_memory != -1 && config->max_memory < 1) ||
-            (config->max_stack != -1 && config->max_stack < 1) || (config->max_output_size != -1 && config->max_output_size < 1 ) ||
-            (config->max_open_file_number != -1 && config->max_open_file_number < 1) || (config->uid != -1 && config->uid < 0) ||
-            (config->gid != -1 && config->gid < 0) ) {
+    if ( (config->max_time!= -1 && config->max_time < 1) || (config->max_cpu_time!= -1 && config->max_cpu_time < 1) ||
+         (config->max_memory != -1 && config->max_memory < 1) || (config->max_stack != -1 && config->max_stack < 1) ||
+         (config->max_output_size != -1 && config->max_output_size < 1 ) || (config->max_thread != -1 && config->max_thread < 1 ) ||
+         (config->max_open_file_number != -1 && config->max_open_file_number < 1) ||
+         (config->uid != -1 && config->uid < 0) || (config->gid != -1 && config->gid < 0) ) {
         RUN_EXIT(ARGS_INVALID);
     }
 
@@ -141,7 +142,8 @@ int run(const RuntimeConfig *config, RuntimeResult *result) {
             result->result = RUNTIME_ERROR_BAD_SYSCALL;
         }
 
-        if (config->max_cpu_time != -1 && ( result->status == 4991 || result->clock_time > config->max_cpu_time || result->cpu_time > config->max_cpu_time)) {
+        if ( (config->max_cpu_time != -1 || config->max_time != -1) &&
+            ( result->status == 4991 || result->clock_time > config->max_time || result->cpu_time > config->max_cpu_time)) {
             result->result = TIME_LIMIT_EXCEEDED;
         }
 
@@ -165,7 +167,7 @@ void *timeout_killer(void *args) {
     } else {
         LOG_DEBUG("timeout killer up");
 
-        timespec delay = {killer->limit / 1000, (killer->limit % 1000 + 100) * 1000000};
+        timespec delay = {killer->limit / 1000, (killer->limit % 1000 + 10) * 1000000};
 
         if (nanosleep(&delay, nullptr) != 0) {
             LOG_WARN("It still have time, why the time out killer wake up?");
