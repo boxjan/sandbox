@@ -1,28 +1,31 @@
 package main
 
-import scmpOs "github.com/sdibtacm/SandBox/mods/ScmpExec/os"
+import (
+	"github.com/sdibtacm/sandbox/mods/exec"
+	"syscall"
+)
 
-type RuntimeResult struct {
-	kernelTime uint
-	userTime   uint
-	clockTime  int64
-	usedMemory int64
-	exitCode   int
-	statusCode int
-	usage      interface{}
+type SandboxRunResult struct {
+	// all time setting is use millisecond
+	// cpu time include kernel time and user time.
+	// memory use 1kb = 1024Bytes
+	KernelTime uint
+	UserTime   uint
+	ClockTime  uint
+	UsedMemory uint64
+	ExitCode   int
+	StatusCode syscall.WaitStatus
+	Error      exec.Error
 }
 
-func getResult(state *scmpOs.ProcessState) *RuntimeResult {
-	return &RuntimeResult{
-		kernelTime: uint(state.SystemTime()),
-		userTime:   uint(state.UserTime()),
-		usage:      state.SysUsage(),
-		exitCode:   state.ExitCode(),
+func getEmptySandboxRunResult() *SandboxRunResult {
+	return &SandboxRunResult{
+		KernelTime: 0,
+		UserTime:   0,
+		ClockTime:  0,
+		UsedMemory: 0,
+		ExitCode:   0,
+		StatusCode: 0,
+		Error:      exec.Error{ErrorNum: 0, Helper: ""},
 	}
 }
-
-//func getUsedMemory(state *os.ProcessState) int64 {
-//	var rusage syscall.Rusage
-//	rusage = (syscall.Rusage).state.SysUsage()
-//	rusage
-//}

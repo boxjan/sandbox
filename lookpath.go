@@ -1,22 +1,34 @@
-// +build linux
+//+build linux
 
-package ScmpExec
-
-// Copyright 2010 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+package main
 
 import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
+
+type Error struct {
+	// Name is the file name for which the error occurred.
+	Name string
+	// Err is the underlying error.
+	Err error
+}
+
+func (e *Error) Error() string {
+	return "exec: " + strconv.Quote(e.Name) + ": " + e.Err.Error()
+}
+
+// Copyright 2010 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 // ErrNotFound is the error resulting if a path search failed to find an executable file.
 var ErrNotFound = errors.New("executable file not found in $PATH")
 
-func findExecutable(file string) error {
+func executable(file string) error {
 	d, err := os.Stat(file)
 	if err != nil {
 		return err
@@ -37,7 +49,7 @@ func LookPath(file string) (string, error) {
 	// but that would not match all the Unix shells.
 
 	if strings.Contains(file, "/") {
-		err := findExecutable(file)
+		err := executable(file)
 		if err == nil {
 			return file, nil
 		}
@@ -50,7 +62,7 @@ func LookPath(file string) (string, error) {
 			dir = "."
 		}
 		path := filepath.Join(dir, file)
-		if err := findExecutable(path); err == nil {
+		if err := executable(path); err == nil {
 			return path, nil
 		}
 	}

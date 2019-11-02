@@ -1,3 +1,3 @@
 // +build !linux
 
-package scmpOs
+package exec

@@ -927,6 +927,25 @@ func (f *ScmpFilter) ExportPFC(file *os.File) error {
 	return nil
 }
 
+// ExportPFC output PFC-formatted, human-readable dump of a filter context's
+// rules to a file.
+// Accepts file to write to (must be open for writing).
+// Returns an error if writing to the file fails.
+func (f *ScmpFilter) ExportPFCFd(fd uintptr) error {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	if !f.valid {
+		return errBadFilter
+	}
+
+	if retCode := C.seccomp_export_pfc(f.filterCtx, C.int(fd)); retCode != 0 {
+		return syscall.Errno(-1 * retCode)
+	}
+
+	return nil
+}
+
 // ExportBPF outputs Berkeley Packet Filter-formatted, kernel-readable dump of a
 // filter context's rules to a file.
 // Accepts file to write to (must be open for writing).
@@ -936,6 +955,25 @@ func (f *ScmpFilter) ExportBPF(file *os.File) error {
 	defer f.lock.Unlock()
 
 	fd := file.Fd()
+
+	if !f.valid {
+		return errBadFilter
+	}
+
+	if retCode := C.seccomp_export_bpf(f.filterCtx, C.int(fd)); retCode != 0 {
+		return syscall.Errno(-1 * retCode)
+	}
+
+	return nil
+}
+
+// ExportBPF outputs Berkeley Packet Filter-formatted, kernel-readable dump of a
+// filter context's rules to a file.
+// Accepts file to write to (must be open for writing).
+// Returns an error if writing to the file fails.
+func (f *ScmpFilter) ExportBPFFd(fd uintptr) error {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	if !f.valid {
 		return errBadFilter

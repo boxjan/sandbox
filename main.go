@@ -1,34 +1,41 @@
 package main
 
 import (
-	"github.com/Boxjan/golib/logs"
+	"github.com/boxjan/golib/logs"
 	"os"
+	"runtime"
 	"syscall"
 )
 
 func main() {
+	runtime.GOMAXPROCS(1)
 	log := logs.NewLogger()
 	err := log.AddAdapter("console", "trace", `{"filename":"sandbox.log", "rotate": false}`)
 	if err != nil {
-		_, _ = os.Stderr.Write([]byte("log add adapter fail with error" + err.Error()))
+		_, _ = os.Stderr.Write([]byte("log add adapter fail with error: " + err.Error()))
 	}
 
-	limit := RuntimeLimit{clockTime: 0, memory: 2048 * 1024 * 1024, threadLimit: 8}
-	io := RuntimeIO{stdin: os.Stdin, stdout: os.Stdout, stderr: os.Stderr}
-	//exec := RuntimeExec{path: `/home/hzj/fork.out`, args: []string{""}, env: syscall.Environ()} // thread
-	//exec := RuntimeExec{path: `/home/hzj/clone.out`, args: []string{""}, env: syscall.Environ()} // process
-	//exec := RuntimeExec{path: `stress`, args: []string{"--vm-bytes", "256m", "--vm-keep", "-m", "4", "--timeout", "3s"}, env: syscall.Environ()} // Memory
-	exec := RuntimeExec{path: `ping`, args: []string{"-c", "5", "192.168.2.1"}, env: syscall.Environ()} // NETWORK
-	//exec := RuntimeExec{path: `bash`, args: []string{}, env: syscall.Environ()} // shell
+	//runner, err := Command("stress", "--vm-bytes", "256m", "--vm-keep", "-m", "2", "--timeout", "10s")
+	runner, err := Command("stress", "--vm-bytes", "256m", "--vm-keep", "-m", "2")
+	//runner, err := Command("ping", "-c", "5", "baidu.com")
+	//runner, err := Command("sh")
+	//runner, err := Command("/home/hzj/fork.out")
 
-	config := RunConfig{
-		limit: &limit,
-		exec:  &exec,
-		io:    &io,
-		log:   log,
+	if err != nil {
+		panic(err)
 	}
+	//if syscall.Getuid() == 0 {
+	//	_ = runner.UseRootUserToRun()
+	//}
+	runner.SetLogger(log)
+	runner.SetEnv(syscall.Environ()...)
+	err = runner.SetDir("/home")
+	if err != nil {
+		panic(err)
+	}
+	runner.SetLimit(GetUnlimitResourceSetting())
 
-	result := config.Run()
+	result := runner.Run()
 
 	log.Debug("{}", result)
 

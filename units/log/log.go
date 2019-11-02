@@ -1,3 +1,3 @@
 package log
 
-import _ "github.com/Boxjan/golib/logs"
+import _ "github.com/boxjan/golib/logs"
