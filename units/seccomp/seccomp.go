@@ -888,7 +888,17 @@ func (f *ScmpFilter) AddRuleExact(call ScmpSyscall, action ScmpAction) error {
 // There is a bug in library versions below v2.2.1 which can, in some cases,
 // cause conditions to be lost when more than one are used. Consequently,
 // AddRuleConditional is disabled on library versions lower than v2.2.1
-func (f *ScmpFilter) AddRuleConditional(call ScmpSyscall, action ScmpAction, conds []ScmpCondition) error {
+func (f *ScmpFilter) AddRuleConditional(call ScmpSyscall, action ScmpAction, conds ScmpCondition) error {
+	return f.addRuleGeneric(call, action, false, []ScmpCondition{conds})
+}
+
+// AddRuleConditionals adds a single rule for a conditional action on a syscall.
+// Returns an error if an issue was encountered adding the rule.
+// All conditions must match for the rule to match.
+// There is a bug in library versions below v2.2.1 which can, in some cases,
+// cause conditions to be lost when more than one are used. Consequently,
+// AddRuleConditional is disabled on library versions lower than v2.2.1
+func (f *ScmpFilter) AddRuleConditionals(call ScmpSyscall, action ScmpAction, conds []ScmpCondition) error {
 	return f.addRuleGeneric(call, action, false, conds)
 }
 
@@ -902,7 +912,21 @@ func (f *ScmpFilter) AddRuleConditional(call ScmpSyscall, action ScmpAction, con
 // There is a bug in library versions below v2.2.1 which can, in some cases,
 // cause conditions to be lost when more than one are used. Consequently,
 // AddRuleConditionalExact is disabled on library versions lower than v2.2.1
-func (f *ScmpFilter) AddRuleConditionalExact(call ScmpSyscall, action ScmpAction, conds []ScmpCondition) error {
+func (f *ScmpFilter) AddRuleConditionalExact(call ScmpSyscall, action ScmpAction, conds ScmpCondition) error {
+	return f.addRuleGeneric(call, action, true, []ScmpCondition{conds})
+}
+
+// AddRuleConditionalExact adds a single rule for a conditional action on a
+// syscall.
+// No modifications will be made to the rule, and it will fail to add if it
+// cannot be applied to the current architecture without modification.
+// The rule will function exactly as described, but it may not function identically
+// (or be able to be applied to) all architectures.
+// Returns an error if an issue was encountered adding the rule.
+// There is a bug in library versions below v2.2.1 which can, in some cases,
+// cause conditions to be lost when more than one are used. Consequently,
+// AddRuleConditionalExact is disabled on library versions lower than v2.2.1
+func (f *ScmpFilter) AddRuleConditionalsExact(call ScmpSyscall, action ScmpAction, conds []ScmpCondition) error {
 	return f.addRuleGeneric(call, action, true, conds)
 }
 
@@ -927,11 +951,11 @@ func (f *ScmpFilter) ExportPFC(file *os.File) error {
 	return nil
 }
 
-// ExportPFC output PFC-formatted, human-readable dump of a filter context's
+// ExportPFC2Fd output PFC-formatted, human-readable dump of a filter context's
 // rules to a file.
-// Accepts file to write to (must be open for writing).
+// Accepts fd to write to (must be open for writing).
 // Returns an error if writing to the file fails.
-func (f *ScmpFilter) ExportPFCFd(fd uintptr) error {
+func (f *ScmpFilter) ExportPFC2Fd(fd uintptr) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
@@ -967,11 +991,11 @@ func (f *ScmpFilter) ExportBPF(file *os.File) error {
 	return nil
 }
 
-// ExportBPF outputs Berkeley Packet Filter-formatted, kernel-readable dump of a
+// ExportBPF2Fd outputs Berkeley Packet Filter-formatted, kernel-readable dump of a
 // filter context's rules to a file.
-// Accepts file to write to (must be open for writing).
+// Accepts fd to write to (must be open for writing).
 // Returns an error if writing to the file fails.
-func (f *ScmpFilter) ExportBPFFd(fd uintptr) error {
+func (f *ScmpFilter) ExportBPF2Fd(fd uintptr) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 

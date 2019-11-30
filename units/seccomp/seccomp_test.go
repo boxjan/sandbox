@@ -567,14 +567,19 @@ func TestRuleAddAndLoad(t *testing.T) {
 
 	conditions := []ScmpCondition{cond, cond2}
 
-	err = filter1.AddRuleConditional(call2, ActErrno.SetReturnCode(0x2), conditions)
+	err = filter1.AddRuleConditional(call2, ActErrno.SetReturnCode(0x2), cond)
 	if err != nil {
-		t.Errorf("Error adding conditional rule: %s", err)
+		t.Errorf("Error adding conditionals rule: %s", err)
 	}
 
-	err = filter1.AddRuleConditional(call3, ActErrno.SetReturnCode(0x3), conditions)
+	err = filter1.AddRuleConditional(call2, ActErrno.SetReturnCode(0x2), cond2)
 	if err != nil {
-		t.Errorf("Error adding second conditional rule: %s", err)
+		t.Errorf("Error adding conditionals rule: %s", err)
+	}
+
+	err = filter1.AddRuleConditionals(call3, ActErrno.SetReturnCode(0x3), conditions)
+	if err != nil {
+		t.Errorf("Error adding second conditionals rule: %s", err)
 	}
 
 	err = filter1.Load()

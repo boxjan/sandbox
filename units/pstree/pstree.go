@@ -83,8 +83,8 @@ type ProcessStat struct {
 	Cmajflt   uint64 // number of major faults the process's waited-for children have made
 	Utime     uint64 // user time in clock ticks
 	Stime     uint64 // system time in clock ticks
-	Cutime    int64  // children user time in clock ticks
-	Cstime    int64  // children system time in clock ticks
+	Cutime    uint64 // children user time in clock ticks
+	Cstime    uint64 // children system time in clock ticks
 	Priority  int64  // priority
 	Nice      int64  // the nice value
 	Nthreads  int64  // number of threads in this process
@@ -109,6 +109,7 @@ func scan(dir string) (Process, error) {
 		return proc, err
 	}
 
+	// some of command will have space, we should get all
 	for !strings.HasSuffix(proc.Stat.Comm, ")") {
 		var str string
 		_, err = fmt.Fscanf(f, "%s", &str)
